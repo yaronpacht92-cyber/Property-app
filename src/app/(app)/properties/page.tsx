@@ -87,10 +87,10 @@ export default async function PropertiesPage({
             <Link
               key={filter.key}
               href={filter.key === "all" ? "/properties" : `/properties?type=${filter.key}`}
-              className={`min-h-12 rounded-xl px-4 py-3 text-lg font-semibold ${
+              className={`min-h-12 rounded-xl px-4 py-3 text-lg font-semibold transition-colors duration-150 ${
                 active
                   ? "bg-[var(--primary)] text-white"
-                  : "bg-[var(--muted)] hover:bg-[var(--secondary)]"
+                  : "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--primary)] hover:text-white"
               }`}
               aria-current={active ? "page" : undefined}
             >

@@ -14,6 +14,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
+    "jobs:weekly-refresh": "tsx scripts/run-weekly-property-refresh.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

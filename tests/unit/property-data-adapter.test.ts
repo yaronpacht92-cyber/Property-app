@@ -13,4 +13,20 @@ describe("property data adapter", () => {
     expect(result?.isEstimated).toBe(true);
     expect(result?.source.toLowerCase()).toContain("sample");
   });
+
+  it("returns a full public snapshot including photo metadata from the mock provider", async () => {
+    const provider = new MockPropertyDataProvider();
+    const snapshot = await provider.fetchPublicSnapshot({
+      streetAddress: "123 Oak Street",
+      city: "Austin",
+      state: "TX",
+      zipCode: "78702",
+    });
+    expect(snapshot.valuation?.estimatedValue).toBeGreaterThan(0);
+    expect(snapshot.tax?.annualTax).toBeTruthy();
+    expect(snapshot.characteristics?.bedrooms).toBeTruthy();
+    expect(snapshot.saleHistory.length).toBeGreaterThan(0);
+    expect(snapshot.photo?.source.toLowerCase()).toContain("sample");
+  });
 });
+

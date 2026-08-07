@@ -4,17 +4,20 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-lg font-semibold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--ring)] disabled:pointer-events-none disabled:opacity-50 min-h-14 px-6",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-lg font-semibold transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--ring)] disabled:pointer-events-none disabled:opacity-50 disabled:grayscale min-h-14 px-6 active:scale-[0.99]",
   {
     variants: {
       variant: {
-        default: "bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]",
+        default:
+          "bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] hover:text-white active:bg-[var(--brand)] active:text-white",
         secondary:
-          "bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:bg-[var(--secondary-hover)] border border-[var(--border)]",
+          "bg-[var(--secondary)] text-[var(--secondary-foreground)] border-2 border-[var(--border-strong)] hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] active:bg-[var(--primary-hover)] active:text-white",
         outline:
-          "border-2 border-[var(--border-strong)] bg-transparent text-[var(--foreground)] hover:bg-[var(--muted)]",
-        danger: "bg-[var(--danger)] text-white hover:bg-[var(--danger-hover)]",
-        ghost: "hover:bg-[var(--muted)] text-[var(--foreground)]",
+          "border-2 border-[var(--border-strong)] bg-white text-[var(--foreground)] hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] active:bg-[var(--primary-hover)] active:text-white",
+        danger:
+          "bg-[var(--danger)] text-white hover:bg-[var(--danger-hover)] hover:text-white active:bg-[#6b1515] active:text-white",
+        ghost:
+          "bg-transparent text-[var(--foreground)] hover:bg-[var(--primary)] hover:text-white active:bg-[var(--primary-hover)] active:text-white",
       },
       size: {
         default: "min-h-14 px-6 text-lg",

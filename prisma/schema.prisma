@@ -296,6 +296,17 @@ model Property {
   leaseLengthMonths Int?
   leaseExpiresAt    DateTime?
   photoDocumentId   String?             @db.Uuid
+  photoSource       String?
+  lastPhotoRefreshAt DateTime?
+  lastDataRefreshAt DateTime?
+  lastDataRefreshSource String?
+  bedrooms          Int?
+  bathrooms         Decimal?            @db.Decimal(4, 1)
+  squareFootage     Int?
+  lotSizeSqFt       Int?
+  yearBuilt         Int?
+  propertyFeaturesSource String?
+  propertyFeaturesUpdatedAt DateTime?
   isSampleData      Boolean             @default(false)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -319,10 +330,14 @@ model Property {
   accountingMappings AccountingPropertyMapping[]
   financialTransactions FinancialTransactionReference[]
   assignments       PropertyAssignment[]
+  saleHistory       PropertySaleHistory[]
+  photoProposals    PropertyPhotoProposal[]
+  dataRefreshLogs   PropertyDataRefreshLog[]
 
   @@index([organizationId, deletedAt])
   @@index([organizationId, propertyType])
   @@index([leaseExpiresAt])
+  @@index([lastDataRefreshAt])
 }
 
 /// Individual people who own (or co-own) a property, with optional ownership share.
@@ -418,6 +433,64 @@ model PropertyTaxRecord {
   property         Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@index([propertyId])
+}
+
+model PropertySaleHistory {
+  id           String    @id @default(uuid()) @db.Uuid
+  propertyId   String    @db.Uuid
+  saleDate     DateTime
+  salePrice    Decimal?  @db.Decimal(14, 2)
+  buyerSeller  String?
+  source       String
+  sourceUpdatedAt DateTime?
+  externalKey  String
+  createdAt    DateTime  @default(now())
+  property     Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, externalKey])
+  @@index([propertyId, saleDate])
+}
+
+enum PhotoProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  SAVED_BOTH
+  EXPIRED
+}
+
+model PropertyPhotoProposal {
+  id                String              @id @default(uuid()) @db.Uuid
+  propertyId        String              @db.Uuid
+  status            PhotoProposalStatus @default(PENDING)
+  proposedStorageKey String
+  proposedMimeType  String
+  proposedSource    String
+  proposedRetrievedAt DateTime
+  currentDocumentId String?             @db.Uuid
+  createdAt         DateTime            @default(now())
+  resolvedAt        DateTime?
+  resolvedById      String?             @db.Uuid
+  property          Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, status])
+}
+
+model PropertyDataRefreshLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  propertyId     String   @db.Uuid
+  organizationId String   @db.Uuid
+  trigger        String
+  status         SyncStatus
+  source         String?
+  fieldsUpdated  Json     @default("[]")
+  message        String?
+  startedAt      DateTime @default(now())
+  finishedAt     DateTime?
+  property       Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, startedAt])
+  @@index([propertyId, startedAt])
 }
 
 model Mortgage {

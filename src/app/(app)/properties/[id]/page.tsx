@@ -12,6 +12,9 @@ import { formatCurrency, formatDate, propertyTypeLabel } from "@/lib/utils";
 import { PropertyNotesForm } from "@/components/properties/notes-form";
 import { ValuationOverrideForm } from "@/components/properties/valuation-override-form";
 import { ArchivePropertyButton } from "@/components/properties/archive-property-button";
+import { RefreshPropertyDataButton } from "@/components/properties/refresh-property-data-button";
+import { PhotoProposalPanel } from "@/components/properties/photo-proposal-panel";
+import { getFileStorage } from "@/adapters/storage";
 
 const TABS = [
   "overview",
@@ -77,6 +80,13 @@ export default async function PropertyDetailPage({
       emailThreads: { orderBy: { receivedAt: "desc" }, take: 10 },
       accountingMappings: true,
       financialTransactions: { orderBy: { txnDate: "desc" }, take: 8 },
+      saleHistory: { orderBy: { saleDate: "desc" }, take: 8 },
+      photoProposals: {
+        where: { status: "PENDING" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+      dataRefreshLogs: { orderBy: { startedAt: "desc" }, take: 3 },
     },
   });
 
@@ -87,6 +97,23 @@ export default async function PropertyDetailPage({
   const manager = property.contacts.find((c) => c.role === "PROPERTY_MANAGER")?.contact;
   const ownerNames = property.owners.map((owner) => owner.name).filter(Boolean);
   const canEdit = hasPermission(session.user.permissions, PERMISSIONS.PROPERTIES_WRITE);
+  const storage = getFileStorage();
+  const currentPhoto = property.photoDocumentId
+    ? await prisma.document.findFirst({
+        where: {
+          id: property.photoDocumentId,
+          organizationId: session.user.organizationId,
+          deletedAt: null,
+        },
+      })
+    : null;
+  const currentPhotoUrl = currentPhoto
+    ? (await storage.getSignedDownloadUrl(currentPhoto.storageKey, 600)).url
+    : null;
+  const pendingProposal = property.photoProposals[0];
+  const proposedPhotoUrl = pendingProposal
+    ? (await storage.getSignedDownloadUrl(pendingProposal.proposedStorageKey, 600)).url
+    : null;
   const canMaintain = hasPermission(session.user.permissions, PERMISSIONS.MAINTENANCE_WRITE);
   const canDocs = hasPermission(session.user.permissions, PERMISSIONS.DOCUMENTS_WRITE);
   const canNotes = hasPermission(session.user.permissions, PERMISSIONS.NOTES_WRITE);
@@ -138,6 +165,12 @@ export default async function PropertyDetailPage({
               · Expires {formatDate(property.leaseExpiresAt)} · Manager:{" "}
               {manager?.name || "Not assigned"} · Last updated {formatDate(property.updatedAt)}
             </p>
+            <p className="mt-1 text-base text-[var(--muted-foreground)]">
+              Last data refresh: {formatDate(property.lastDataRefreshAt)}
+              {property.lastDataRefreshSource ? ` · ${property.lastDataRefreshSource}` : ""}
+              {" · "}
+              Last photo update: {formatDate(property.lastPhotoRefreshAt)}
+            </p>
             {property.reminders[0] ? (
               <p className="mt-3">
                 <Badge tone={property.reminders[0].status === "OVERDUE" ? "danger" : "warning"}>
@@ -151,13 +184,46 @@ export default async function PropertyDetailPage({
               </p>
             ) : null}
           </div>
-          <div
-            className="flex h-40 w-full max-w-xs items-center justify-center rounded-2xl bg-[var(--muted)] text-center text-base font-semibold text-[var(--muted-foreground)] md:w-64"
-            aria-hidden="true"
-          >
-            Property photo
+          <div className="w-full max-w-xs md:w-64">
+            {currentPhotoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={currentPhotoUrl}
+                alt={`Exterior photo of ${property.nickname}`}
+                className="h-40 w-full rounded-2xl object-cover"
+              />
+            ) : (
+              <div className="flex h-40 items-center justify-center rounded-2xl bg-[var(--muted)] text-center text-base font-semibold text-[var(--muted-foreground)]">
+                Property photo not added yet
+              </div>
+            )}
+            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+              {property.photoSource
+                ? `Photo source: ${property.photoSource}`
+                : "No public photo source on file"}
+            </p>
           </div>
         </div>
+
+        {canEdit ? (
+          <div className="mt-6">
+            <RefreshPropertyDataButton propertyId={property.id} />
+          </div>
+        ) : null}
+
+        {pendingProposal && proposedPhotoUrl ? (
+          <div className="mt-6">
+            <PhotoProposalPanel
+              proposal={{
+                id: pendingProposal.id,
+                proposedSource: pendingProposal.proposedSource,
+                proposedRetrievedAt: pendingProposal.proposedRetrievedAt.toISOString(),
+                proposedImageUrl: proposedPhotoUrl,
+              }}
+              currentImageUrl={currentPhotoUrl}
+            />
+          </div>
+        ) : null}
 
         <div className="mt-6 flex flex-wrap gap-3">
           {canEdit ? (
@@ -201,8 +267,10 @@ export default async function PropertyDetailPage({
             <Link
               key={item}
               href={`/properties/${property.id}?tab=${item}`}
-              className={`min-h-12 rounded-xl px-4 py-3 text-lg font-semibold capitalize ${
-                active ? "bg-[var(--primary)] text-white" : "bg-[var(--muted)]"
+              className={`min-h-12 rounded-xl px-4 py-3 text-lg font-semibold capitalize transition-colors duration-150 ${
+                active
+                  ? "bg-[var(--primary)] text-white"
+                  : "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--primary)] hover:text-white"
               }`}
               aria-current={active ? "page" : undefined}
             >
@@ -245,11 +313,29 @@ export default async function PropertyDetailPage({
                   : "Not set"}
               </li>
               <li>
+                Beds / baths: {property.bedrooms ?? "Not set"} /{" "}
+                {property.bathrooms?.toString() ?? "Not set"}
+              </li>
+              <li>
+                Living area:{" "}
+                {property.squareFootage
+                  ? `${property.squareFootage.toLocaleString()} sq ft`
+                  : "Not set"}
+              </li>
+              <li>
+                Lot size:{" "}
+                {property.lotSizeSqFt
+                  ? `${property.lotSizeSqFt.toLocaleString()} sq ft`
+                  : "Not set"}
+              </li>
+              <li>Year built: {property.yearBuilt ?? "Not set"}</li>
+              <li>
                 Insurance status:{" "}
                 {property.insurancePolicies[0]?.status.replaceAll("_", " ") ||
                   "Missing information"}
               </li>
               <li>Mortgage status: {property.mortgages[0]?.status || "Not set"}</li>
+              <li>Last photo update: {formatDate(property.lastPhotoRefreshAt)}</li>
             </ul>
           </InfoPanel>
           <InfoPanel title="Upcoming deadlines">
@@ -279,6 +365,20 @@ export default async function PropertyDetailPage({
               </p>
             ))}
           </InfoPanel>
+          <InfoPanel title="Public sale history">
+            {property.saleHistory.length === 0 ? (
+              <p className="text-lg">No public sale history on file yet.</p>
+            ) : (
+              <ul className="space-y-2 text-lg">
+                {property.saleHistory.map((sale) => (
+                  <li key={sale.id}>
+                    {formatDate(sale.saleDate)} · {formatCurrency(sale.salePrice?.toString())}
+                    {sale.buyerSeller ? ` · ${sale.buyerSeller}` : ""}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </InfoPanel>
         </section>
       ) : null}
 
@@ -304,7 +404,11 @@ export default async function PropertyDetailPage({
               Source: {valuation?.source || "Not set"} · Updated{" "}
               {formatDate(valuation?.sourceUpdatedAt || valuation?.createdAt)} ·{" "}
               {valuation?.isEstimated ? "Estimated" : "Exact"} ·{" "}
-              {valuation?.isManualOverride ? "Manual override" : "From source"}
+              {valuation?.isManualOverride ? "Manual override (kept on refresh)" : "From source"}
+            </p>
+            <p className="mt-2 text-base text-[var(--muted-foreground)]">
+              Last portfolio data refresh: {formatDate(property.lastDataRefreshAt)}
+              {property.lastDataRefreshSource ? ` · ${property.lastDataRefreshSource}` : ""}
             </p>
             {canEdit ? <ValuationOverrideForm propertyId={property.id} /> : null}
           </InfoPanel>

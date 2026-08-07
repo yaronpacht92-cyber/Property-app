@@ -22,10 +22,10 @@ export function PrimaryNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`min-h-12 rounded-xl px-4 py-3 text-lg font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--ring)] ${
+            className={`min-h-12 rounded-xl px-4 py-3 text-lg font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--ring)] ${
               active
-                ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                : "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)]"
+                ? "bg-[var(--primary)] text-white"
+                : "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--primary)] hover:text-white"
             }`}
             aria-current={active ? "page" : undefined}
           >

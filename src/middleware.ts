@@ -23,7 +23,8 @@ export async function middleware(request: NextRequest) {
   if (
     publicPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`)) ||
     pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico"
+    pathname === "/favicon.ico" ||
+    pathname.startsWith("/api/cron/")
   ) {
     return response;
   }

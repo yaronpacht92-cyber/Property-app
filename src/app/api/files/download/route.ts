@@ -41,11 +41,33 @@ export async function GET(request: NextRequest) {
     },
   });
 
+  let mimeType = document?.mimeType;
+  let fileName = document?.name;
+  let storageKey = document?.storageKey;
+  let infected = document?.scanStatus === "INFECTED";
+
   if (!document) {
-    return NextResponse.json({ error: "We could not find that document." }, { status: 404 });
+    // Allow pending photo proposals from the same organization.
+    const proposal = await prisma.propertyPhotoProposal.findFirst({
+      where: {
+        proposedStorageKey: payload.storageKey,
+        status: "PENDING",
+        property: {
+          organizationId: session.user.organizationId,
+          deletedAt: null,
+        },
+      },
+    });
+    if (!proposal) {
+      return NextResponse.json({ error: "We could not find that document." }, { status: 404 });
+    }
+    mimeType = proposal.proposedMimeType;
+    fileName = "proposed-exterior-photo";
+    storageKey = proposal.proposedStorageKey;
+    infected = false;
   }
 
-  if (document.scanStatus === "INFECTED") {
+  if (infected) {
     return NextResponse.json(
       { error: "This file failed a security check and cannot be downloaded." },
       { status: 403 },
@@ -54,11 +76,11 @@ export async function GET(request: NextRequest) {
 
   try {
     const storage = new LocalFileStorageAdapter();
-    const data = await storage.read(document.storageKey);
+    const data = await storage.read(storageKey!);
     return new NextResponse(new Uint8Array(data), {
       headers: {
-        "Content-Type": document.mimeType,
-        "Content-Disposition": `attachment; filename="${document.name.replace(/"/g, "")}"`,
+        "Content-Type": mimeType || "application/octet-stream",
+        "Content-Disposition": `inline; filename="${(fileName || "file").replace(/"/g, "")}"`,
         "Cache-Control": "no-store",
       },
     });
@@ -66,7 +88,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "This sample document does not have a stored file yet. Upload a new document to download it.",
+          "This file is not available right now. Try refreshing the page or uploading the photo again.",
       },
       { status: 404 },
     );
