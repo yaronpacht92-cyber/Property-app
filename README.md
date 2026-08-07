@@ -103,7 +103,10 @@ npm run test:e2e     # Playwright (app must be running)
 npm run db:migrate   # create/apply migrations
 npm run db:seed      # load sample portfolio
 npm run db:deploy    # apply migrations in staging/production
+npm run jobs:weekly-refresh  # run authorized weekly property data refresh once
 ```
+
+Weekly refresh is also available at `/api/cron/weekly-property-refresh` (secured with `CRON_SECRET`) and scheduled in `vercel.json`. See `docs/architecture/PROPERTY_DATA_REFRESH.md`.
 
 ## Real vs mock integrations
 
