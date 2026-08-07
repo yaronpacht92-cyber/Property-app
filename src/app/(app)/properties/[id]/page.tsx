@@ -12,6 +12,7 @@ import { formatCurrency, formatDate, propertyTypeLabel } from "@/lib/utils";
 import { PropertyNotesForm } from "@/components/properties/notes-form";
 import { ValuationOverrideForm } from "@/components/properties/valuation-override-form";
 import { ArchivePropertyButton } from "@/components/properties/archive-property-button";
+import { PropertyPhotoUpload } from "@/components/properties/property-photo-upload";
 import { getFileStorage } from "@/adapters/storage";
 
 const TABS = [
@@ -165,23 +166,12 @@ export default async function PropertyDetailPage({
               </p>
             ) : null}
           </div>
-          <div className="w-full max-w-xs md:w-64">
-            {currentPhotoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={currentPhotoUrl}
-                alt={`Exterior photo of ${property.nickname}`}
-                className="h-40 w-full rounded-2xl object-cover"
-              />
-            ) : (
-              <div className="flex h-40 items-center justify-center rounded-2xl bg-[var(--muted)] text-center text-base font-semibold text-[var(--muted-foreground)]">
-                Property photo not added yet
-              </div>
-            )}
-            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-              Upload a photo from Documents when you have one.
-            </p>
-          </div>
+          <PropertyPhotoUpload
+            propertyId={property.id}
+            nickname={property.nickname}
+            currentPhotoUrl={currentPhotoUrl}
+            canUpload={canDocs}
+          />
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
