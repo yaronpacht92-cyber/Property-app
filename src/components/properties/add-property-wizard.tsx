@@ -60,6 +60,8 @@ export function AddPropertyWizard({ ownershipEntities }: Props) {
     monthlyRent: "",
     leaseLengthMonths: "",
     leaseExpiresAt: "",
+    monthlyManagementFee: "",
+    otherMonthlyExpenses: "",
     managerName: "",
     managerCompany: "",
     managerPhone: "",
@@ -410,6 +412,26 @@ export function AddPropertyWizard({ ownershipEntities }: Props) {
                   type="date"
                   value={form.leaseExpiresAt}
                   onChange={(e) => update("leaseExpiresAt", e.target.value)}
+                />
+              </Field>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field
+                label="Property management fee / month"
+                tip="Optional. Included in the portfolio P&L."
+              >
+                <Input
+                  value={form.monthlyManagementFee}
+                  onChange={(e) => update("monthlyManagementFee", e.target.value)}
+                />
+              </Field>
+              <Field
+                label="Other fixed expenses / month"
+                tip="HOA dues, owner-paid utilities, or similar recurring costs."
+              >
+                <Input
+                  value={form.otherMonthlyExpenses}
+                  onChange={(e) => update("otherMonthlyExpenses", e.target.value)}
                 />
               </Field>
             </div>

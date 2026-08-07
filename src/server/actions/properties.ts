@@ -32,6 +32,8 @@ const basicSchema = z.object({
   monthlyRent: z.string().optional(),
   leaseLengthMonths: z.string().optional(),
   leaseExpiresAt: z.string().optional(),
+  monthlyManagementFee: z.string().optional(),
+  otherMonthlyExpenses: z.string().optional(),
   estimatedValue: z.string().optional(),
   assessedValue: z.string().optional(),
   annualTaxes: z.string().optional(),
@@ -173,6 +175,8 @@ export async function createPropertyAction(formData: FormData) {
       monthlyRent: money(data.monthlyRent),
       leaseLengthMonths: months(data.leaseLengthMonths),
       leaseExpiresAt: data.leaseExpiresAt ? new Date(data.leaseExpiresAt) : null,
+      monthlyManagementFee: money(data.monthlyManagementFee),
+      otherMonthlyExpenses: money(data.otherMonthlyExpenses),
       bedrooms: intOrNull(data.bedrooms),
       bathrooms: decimalOrNull(data.bathrooms),
       squareFootage: intOrNull(data.squareFootage),
@@ -374,6 +378,8 @@ export async function updatePropertyBasicsAction(propertyId: string, formData: F
   const monthlyRent = money(String(formData.get("monthlyRent") ?? ""));
   const leaseLengthMonths = months(String(formData.get("leaseLengthMonths") ?? ""));
   const leaseExpiresAtRaw = String(formData.get("leaseExpiresAt") ?? "");
+  const monthlyManagementFee = money(String(formData.get("monthlyManagementFee") ?? ""));
+  const otherMonthlyExpenses = money(String(formData.get("otherMonthlyExpenses") ?? ""));
   const bedrooms = intOrNull(String(formData.get("bedrooms") ?? ""));
   const bathrooms = decimalOrNull(String(formData.get("bathrooms") ?? ""));
   const squareFootage = intOrNull(String(formData.get("squareFootage") ?? ""));
@@ -405,6 +411,8 @@ export async function updatePropertyBasicsAction(propertyId: string, formData: F
       monthlyRent,
       leaseLengthMonths,
       leaseExpiresAt: leaseExpiresAtRaw ? new Date(leaseExpiresAtRaw) : null,
+      monthlyManagementFee,
+      otherMonthlyExpenses,
       bedrooms,
       bathrooms,
       squareFootage,
@@ -426,6 +434,7 @@ export async function updatePropertyBasicsAction(propertyId: string, formData: F
   });
 
   revalidatePath(`/properties/${propertyId}`);
+  revalidatePath("/financials");
   redirect(`/properties/${propertyId}?saved=1`);
 }
 

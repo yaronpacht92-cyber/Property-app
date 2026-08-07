@@ -67,10 +67,19 @@ export default async function HomePage({
           </p>
         </div>
         {canAdd ? (
-          <Button asChild size="large" className="animate-soft-pulse">
-            <Link href="/properties/new">Add Property</Link>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild size="large" variant="secondary">
+              <Link href="/financials">View portfolio P&amp;L</Link>
+            </Button>
+            <Button asChild size="large" className="animate-soft-pulse">
+              <Link href="/properties/new">Add Property</Link>
+            </Button>
+          </div>
+        ) : (
+          <Button asChild size="large" variant="secondary">
+            <Link href="/financials">View portfolio P&amp;L</Link>
           </Button>
-        ) : null}
+        )}
       </div>
 
       {params.error === "permission" ? (

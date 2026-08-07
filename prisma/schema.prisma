@@ -295,6 +295,10 @@ model Property {
   monthlyRent       Decimal?            @db.Decimal(14, 2)
   leaseLengthMonths Int?
   leaseExpiresAt    DateTime?
+  /** Monthly property-management fee (manual entry). */
+  monthlyManagementFee Decimal?         @db.Decimal(14, 2)
+  /** Other recurring monthly fixed costs (HOA, utilities owner-paid, etc.). */
+  otherMonthlyExpenses Decimal?         @db.Decimal(14, 2)
   photoDocumentId   String?             @db.Uuid
   bedrooms          Int?
   bathrooms         Decimal?            @db.Decimal(4, 1)

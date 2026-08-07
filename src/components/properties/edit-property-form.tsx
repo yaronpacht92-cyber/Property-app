@@ -28,6 +28,8 @@ type Props = {
     monthlyRent: string;
     leaseLengthMonths: string;
     leaseExpiresAt: string;
+    monthlyManagementFee: string;
+    otherMonthlyExpenses: string;
     bedrooms: string;
     bathrooms: string;
     squareFootage: string;
@@ -271,6 +273,33 @@ export function EditPropertyForm({ property, ownershipEntities }: Props) {
           />
         </div>
       </div>
+
+      <fieldset>
+        <legend className="mb-2 text-lg font-semibold">Fixed monthly expenses</legend>
+        <p className="mb-3 text-base text-[var(--muted-foreground)]">
+          These feed the portfolio P&amp;L summary.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="monthlyManagementFee">Property management fee / month</Label>
+            <Input
+              id="monthlyManagementFee"
+              name="monthlyManagementFee"
+              defaultValue={property.monthlyManagementFee}
+              placeholder="240"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="otherMonthlyExpenses">Other fixed expenses / month</Label>
+            <Input
+              id="otherMonthlyExpenses"
+              name="otherMonthlyExpenses"
+              defaultValue={property.otherMonthlyExpenses}
+              placeholder="HOA, utilities, etc."
+            />
+          </div>
+        </div>
+      </fieldset>
 
       <fieldset>
         <legend className="mb-2 text-lg font-semibold">Property details (manual entry)</legend>

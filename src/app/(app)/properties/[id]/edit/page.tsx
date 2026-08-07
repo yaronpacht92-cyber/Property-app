@@ -52,6 +52,8 @@ export default async function EditPropertyPage({
           leaseExpiresAt: property.leaseExpiresAt
             ? property.leaseExpiresAt.toISOString().slice(0, 10)
             : "",
+          monthlyManagementFee: property.monthlyManagementFee?.toString() || "",
+          otherMonthlyExpenses: property.otherMonthlyExpenses?.toString() || "",
           bedrooms: property.bedrooms?.toString() || "",
           bathrooms: property.bathrooms?.toString() || "",
           squareFootage: property.squareFootage?.toString() || "",
