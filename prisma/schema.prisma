@@ -1,0 +1,701 @@
+// Homefolio — Family Property Portfolio
+// PostgreSQL + Prisma. All portfolio records scoped by organizationId.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  VACANT_LAND
+  OTHER
+}
+
+enum PropertyStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ContactRole {
+  PROPERTY_MANAGER
+  EMERGENCY
+  INSURANCE_AGENT
+  ACCOUNTANT
+  ATTORNEY
+  TENANT
+  VENDOR
+  OTHER
+}
+
+enum WorkType {
+  ROUTINE
+  REPAIR
+  CAPITAL
+}
+
+enum MaintenanceCategory {
+  PLUMBING
+  ELECTRICAL
+  HVAC
+  ROOF
+  APPLIANCES
+  LANDSCAPING
+  INTERIOR
+  EXTERIOR
+  SAFETY
+  OTHER
+}
+
+enum InsuranceStatus {
+  ACTIVE
+  RENEWAL_COMING_UP
+  EXPIRED
+  MISSING_INFORMATION
+}
+
+enum TaxPaymentStatus {
+  PAID
+  DUE
+  OVERDUE
+  UNKNOWN
+}
+
+enum DocumentCategory {
+  DEED
+  CLOSING
+  MORTGAGE
+  INSURANCE
+  PROPERTY_TAX
+  LEASE
+  INSPECTION
+  APPRAISAL
+  INVOICE
+  RECEIPT
+  WARRANTY
+  CONTRACTOR_PROPOSAL
+  PROPERTY_MANAGEMENT_AGREEMENT
+  LEGAL
+  ACCOUNTING
+  PHOTO
+  OTHER
+}
+
+enum ScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  SKIPPED
+}
+
+enum ReminderType {
+  INSURANCE_RENEWAL
+  PROPERTY_TAX
+  LEASE_EXPIRATION
+  LOAN_MATURITY
+  INSPECTION
+  ROUTINE_MAINTENANCE
+  WARRANTY_EXPIRATION
+  CONTRACTOR_FOLLOW_UP
+  LICENSE_RENEWAL
+  CUSTOM
+}
+
+enum ReminderStatus {
+  UPCOMING
+  DUE_SOON
+  OVERDUE
+  COMPLETED
+  DISMISSED
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  NOT_CONFIGURED
+}
+
+enum EmailProvider {
+  GMAIL
+  MICROSOFT
+}
+
+enum EmailCategory {
+  PROPERTY_MANAGER
+  INSURANCE
+  TAXES
+  MAINTENANCE
+  TENANT
+  LEGAL
+  ACCOUNTING
+  VENDOR
+  OTHER
+}
+
+enum AccountingProvider {
+  QUICKBOOKS
+}
+
+enum AccountingMappingType {
+  CLASS
+  CUSTOMER
+  PROJECT
+  LOCATION
+  ACCOUNT
+  CUSTOM
+}
+
+enum SyncStatus {
+  SUCCESS
+  FAILED
+  PARTIAL
+  RUNNING
+}
+
+model User {
+  id                  String       @id @default(uuid()) @db.Uuid
+  email               String       @unique
+  name                String
+  passwordHash        String
+  mfaSecretEnc        String?
+  mfaEnabled          Boolean      @default(false)
+  failedLoginAttempts Int          @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  memberships         Membership[]
+  notes               Note[]       @relation("NoteAuthor")
+  documentsUploaded   Document[]   @relation("DocumentUploader")
+  remindersAssigned   Reminder[]   @relation("ReminderAssignee")
+  auditLogs           AuditLog[]
+  propertyAssignments PropertyAssignment[]
+  sessions            Session[]
+  accounts            Account[]
+}
+
+model Organization {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  name                  String
+  settings              Json                        @default("{}")
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  memberships           Membership[]
+  roles                 Role[]
+  ownershipEntities     OwnershipEntity[]
+  properties            Property[]
+  contacts              Contact[]
+  contractors           Contractor[]
+  documents             Document[]
+  reminders             Reminder[]
+  emailConnections      EmailConnection[]
+  emailThreads          EmailThreadReference[]
+  accountingConnections AccountingConnection[]
+  financialTransactions FinancialTransactionReference[]
+  syncLogs              IntegrationSyncLog[]
+  auditLogs             AuditLog[]
+}
+
+model Role {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String?          @db.Uuid
+  key            String
+  name           String
+  description    String?
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships    Membership[]
+  permissions    RolePermission[]
+
+  @@unique([organizationId, key])
+}
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Uuid
+  key         String           @unique
+  description String
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model Membership {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @db.Uuid
+  organizationId String           @db.Uuid
+  roleId         String           @db.Uuid
+  status         MembershipStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           Role             @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model PropertyAssignment {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  propertyId String   @db.Uuid
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+}
+
+model OwnershipEntity {
+  id             String              @id @default(uuid()) @db.Uuid
+  organizationId String              @db.Uuid
+  name           String
+  entityType     String?
+  taxIdEnc       String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  deletedAt      DateTime?
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  properties     Property[]
+  ownerships     PropertyOwnership[]
+
+  @@index([organizationId])
+}
+
+model Property {
+  id                String              @id @default(uuid()) @db.Uuid
+  organizationId    String              @db.Uuid
+  ownershipEntityId String?             @db.Uuid
+  nickname          String
+  propertyType      PropertyType
+  status            PropertyStatus      @default(ACTIVE)
+  streetAddress     String
+  city              String
+  state             String
+  zipCode           String
+  dateAcquired      DateTime?
+  purchasePrice     Decimal?            @db.Decimal(14, 2)
+  photoDocumentId   String?             @db.Uuid
+  isSampleData      Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  createdById       String?             @db.Uuid
+  updatedById       String?             @db.Uuid
+  deletedAt         DateTime?
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ownershipEntity   OwnershipEntity?    @relation(fields: [ownershipEntityId], references: [id])
+  ownerships        PropertyOwnership[]
+  contacts          PropertyContact[]
+  valuations        PropertyValuation[]
+  taxRecords        PropertyTaxRecord[]
+  mortgages         Mortgage[]
+  insurancePolicies InsurancePolicy[]
+  maintenanceRecords MaintenanceRecord[]
+  documents         Document[]
+  reminders         Reminder[]
+  notes             Note[]
+  emailThreads      EmailThreadReference[]
+  accountingMappings AccountingPropertyMapping[]
+  financialTransactions FinancialTransactionReference[]
+  assignments       PropertyAssignment[]
+
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, propertyType])
+}
+
+model PropertyOwnership {
+  id                String          @id @default(uuid()) @db.Uuid
+  propertyId        String          @db.Uuid
+  ownershipEntityId String          @db.Uuid
+  ownershipPercent  Decimal         @default(100) @db.Decimal(5, 2)
+  startDate         DateTime?
+  endDate           DateTime?
+  property          Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  ownershipEntity   OwnershipEntity @relation(fields: [ownershipEntityId], references: [id])
+}
+
+model Contact {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  name           String
+  company        String?
+  phone          String?
+  email          String?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  properties     PropertyContact[]
+  insurancePolicies InsurancePolicy[] @relation("InsuranceAgent")
+
+  @@index([organizationId])
+}
+
+model PropertyContact {
+  id         String      @id @default(uuid()) @db.Uuid
+  propertyId String      @db.Uuid
+  contactId  String      @db.Uuid
+  role       ContactRole
+  isEmergency Boolean    @default(false)
+  property   Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  contact    Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, contactId, role])
+}
+
+model PropertyValuation {
+  id              String    @id @default(uuid()) @db.Uuid
+  propertyId      String    @db.Uuid
+  estimatedValue  Decimal   @db.Decimal(14, 2)
+  source          String
+  sourceUpdatedAt DateTime?
+  isEstimated     Boolean   @default(true)
+  isManualOverride Boolean  @default(false)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  createdById     String?   @db.Uuid
+  property        Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, createdAt])
+}
+
+model PropertyTaxRecord {
+  id               String           @id @default(uuid()) @db.Uuid
+  propertyId       String           @db.Uuid
+  assessedValue    Decimal?         @db.Decimal(14, 2)
+  annualTax        Decimal?         @db.Decimal(14, 2)
+  authority        String?
+  parcelNumber     String?
+  jurisdiction     String?
+  dueDate          DateTime?
+  paymentStatus    TaxPaymentStatus @default(UNKNOWN)
+  source           String           @default("manual")
+  sourceUpdatedAt  DateTime?
+  isManualOverride Boolean          @default(true)
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  property         Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model Mortgage {
+  id               String    @id @default(uuid()) @db.Uuid
+  propertyId       String    @db.Uuid
+  lender           String?
+  accountNumberEnc String?
+  monthlyPayment   Decimal?  @db.Decimal(14, 2)
+  interestRate     Decimal?  @db.Decimal(6, 4)
+  maturityDate     DateTime?
+  status           String    @default("active")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  property         Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model InsurancePolicy {
+  id              String          @id @default(uuid()) @db.Uuid
+  propertyId      String          @db.Uuid
+  carrier         String?
+  policyNumber    String?
+  policyType      String?
+  coverageAmount  Decimal?        @db.Decimal(14, 2)
+  premium         Decimal?        @db.Decimal(14, 2)
+  effectiveDate   DateTime?
+  renewalDate     DateTime?
+  cancellationDate DateTime?
+  status          InsuranceStatus @default(MISSING_INFORMATION)
+  agentContactId  String?         @db.Uuid
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+  property        Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  agentContact    Contact?        @relation("InsuranceAgent", fields: [agentContactId], references: [id])
+
+  @@index([propertyId])
+  @@index([renewalDate])
+}
+
+model Contractor {
+  id             String              @id @default(uuid()) @db.Uuid
+  organizationId String              @db.Uuid
+  name           String
+  phone          String?
+  email          String?
+  specialty      String?
+  createdAt      DateTime            @default(now())
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  maintenance    MaintenanceRecord[]
+
+  @@index([organizationId])
+}
+
+model MaintenanceRecord {
+  id              String              @id @default(uuid()) @db.Uuid
+  propertyId      String              @db.Uuid
+  category        MaintenanceCategory
+  workType        WorkType
+  description     String
+  completedAt     DateTime
+  cost            Decimal?            @db.Decimal(14, 2)
+  warrantyExpiresAt DateTime?
+  nextServiceAt   DateTime?
+  notes           String?
+  contractorId    String?             @db.Uuid
+  documentId      String?             @db.Uuid
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  createdById     String?             @db.Uuid
+  deletedAt       DateTime?
+  property        Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  contractor      Contractor?         @relation(fields: [contractorId], references: [id])
+
+  @@index([propertyId, completedAt])
+}
+
+model Document {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  propertyId     String?          @db.Uuid
+  category       DocumentCategory
+  name           String
+  storageKey     String
+  mimeType       String
+  sizeBytes      Int
+  expiresAt      DateTime?
+  notes          String?
+  uploadedById   String?          @db.Uuid
+  scanStatus     ScanStatus       @default(PENDING)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property       Property?        @relation(fields: [propertyId], references: [id])
+  uploadedBy     User?            @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  notesWithAttachment Note[]
+
+  @@index([organizationId, deletedAt])
+  @@index([propertyId])
+}
+
+model Reminder {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
+  propertyId     String?        @db.Uuid
+  type           ReminderType
+  title          String
+  description    String?
+  dueDate        DateTime
+  status         ReminderStatus @default(UPCOMING)
+  assignedToId   String?        @db.Uuid
+  scheduleOffsets Json          @default("[90,60,30,7]")
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  completedAt    DateTime?
+  deletedAt      DateTime?
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property       Property?      @relation(fields: [propertyId], references: [id])
+  assignedTo     User?          @relation("ReminderAssignee", fields: [assignedToId], references: [id])
+
+  @@index([organizationId, status, dueDate])
+  @@index([propertyId])
+}
+
+model Note {
+  id                   String    @id @default(uuid()) @db.Uuid
+  propertyId           String    @db.Uuid
+  authorId             String    @db.Uuid
+  category             String?
+  body                 String
+  attachmentDocumentId String?   @db.Uuid
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime?
+  property             Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  author               User      @relation("NoteAuthor", fields: [authorId], references: [id])
+  attachment           Document? @relation(fields: [attachmentDocumentId], references: [id])
+
+  @@index([propertyId, createdAt])
+}
+
+model EmailConnection {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  provider       EmailProvider
+  status         IntegrationStatus @default(NOT_CONFIGURED)
+  tokenVaultRef  String?
+  accountEmail   String?
+  lastSyncAt     DateTime?
+  lastError      String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  threads        EmailThreadReference[]
+
+  @@index([organizationId])
+}
+
+model EmailThreadReference {
+  id               String         @id @default(uuid()) @db.Uuid
+  organizationId   String         @db.Uuid
+  propertyId       String?        @db.Uuid
+  connectionId     String         @db.Uuid
+  externalThreadId String
+  subject          String
+  snippet          String?
+  sender           String?
+  receivedAt       DateTime?
+  category         EmailCategory  @default(OTHER)
+  isImportant      Boolean        @default(false)
+  matchMethod      String?
+  createdAt        DateTime       @default(now())
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property         Property?      @relation(fields: [propertyId], references: [id])
+  connection       EmailConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, externalThreadId])
+  @@index([organizationId, propertyId])
+}
+
+model AccountingConnection {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  provider       AccountingProvider
+  status         IntegrationStatus @default(NOT_CONFIGURED)
+  tokenVaultRef  String?
+  realmId        String?
+  lastSyncAt     DateTime?
+  lastError      String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  mappings       AccountingPropertyMapping[]
+  transactions   FinancialTransactionReference[]
+
+  @@index([organizationId])
+}
+
+model AccountingPropertyMapping {
+  id           String                @id @default(uuid()) @db.Uuid
+  propertyId   String                @db.Uuid
+  connectionId String                @db.Uuid
+  mappingType  AccountingMappingType
+  externalId   String
+  externalName String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  property     Property              @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  connection   AccountingConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, connectionId, mappingType])
+}
+
+model FinancialTransactionReference {
+  id             String               @id @default(uuid()) @db.Uuid
+  organizationId String               @db.Uuid
+  propertyId     String?              @db.Uuid
+  connectionId   String               @db.Uuid
+  externalTxnId  String
+  amount         Decimal              @db.Decimal(14, 2)
+  txnDate        DateTime
+  category       String?
+  memo           String?
+  matched        Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property       Property?            @relation(fields: [propertyId], references: [id])
+  connection     AccountingConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, externalTxnId])
+  @@index([organizationId, propertyId])
+}
+
+model IntegrationSyncLog {
+  id               String       @id @default(uuid()) @db.Uuid
+  organizationId   String       @db.Uuid
+  connectionType   String
+  connectionId     String       @db.Uuid
+  status           SyncStatus
+  startedAt        DateTime
+  finishedAt       DateTime?
+  message          String?
+  recordsProcessed Int          @default(0)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, startedAt])
+}
+
+model AuditLog {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  actorUserId    String?      @db.Uuid
+  action         String
+  entityType     String
+  entityId       String?
+  summary        String
+  metadata       Json         @default("{}")
+  ipHash         String?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor          User?        @relation(fields: [actorUserId], references: [id])
+
+  @@index([organizationId, createdAt])
+}
+
+/// Auth.js adapter models
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
