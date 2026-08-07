@@ -13,6 +13,7 @@ import { PropertyNotesForm } from "@/components/properties/notes-form";
 import { ValuationOverrideForm } from "@/components/properties/valuation-override-form";
 import { ArchivePropertyButton } from "@/components/properties/archive-property-button";
 import { PropertyPhotoUpload } from "@/components/properties/property-photo-upload";
+import { PropertyManagerForm } from "@/components/properties/property-manager-form";
 import { getFileStorage } from "@/adapters/storage";
 
 const TABS = [
@@ -87,6 +88,7 @@ export default async function PropertyDetailPage({
   const valuation = property.valuations[0];
   const tax = property.taxRecords[0];
   const manager = property.contacts.find((c) => c.role === "PROPERTY_MANAGER")?.contact;
+  const otherContacts = property.contacts.filter((c) => c.role !== "PROPERTY_MANAGER");
   const ownerNames = property.owners.map((owner) => owner.name).filter(Boolean);
   const canEdit = hasPermission(session.user.permissions, PERMISSIONS.PROPERTIES_WRITE);
   const storage = getFileStorage();
@@ -482,7 +484,63 @@ export default async function PropertyDetailPage({
       ) : null}
 
       {tab === "contacts" ? (
-        <section className="space-y-3">
+        <section className="space-y-4">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-semibold">Property manager</h2>
+                <p className="mt-1 text-base text-[var(--muted-foreground)]">
+                  Add or update the manager used for Contact Property Manager.
+                </p>
+              </div>
+              {manager ? (
+                <Button asChild variant="outline" size="small">
+                  <Link href={`/properties/${property.id}/contact-manager`}>Contact manager</Link>
+                </Button>
+              ) : null}
+            </div>
+
+            {manager ? (
+              <article className="mt-4 rounded-xl border border-[var(--border)] bg-white p-4">
+                <p className="text-xl font-semibold">{manager.name}</p>
+                <p className="text-lg">{manager.company || "No company listed"}</p>
+                <p className="text-lg">
+                  {manager.phone || "No phone"} · {manager.email || "No email"}
+                </p>
+                {manager.notes ? (
+                  <p className="mt-2 text-base text-[var(--muted-foreground)]">{manager.notes}</p>
+                ) : null}
+              </article>
+            ) : (
+              <p className="mt-4 text-lg text-[var(--muted-foreground)]">
+                No property manager on file yet.
+              </p>
+            )}
+
+            {canEdit ? (
+              <div className="mt-4">
+                <PropertyManagerForm
+                  propertyId={property.id}
+                  initial={
+                    manager
+                      ? {
+                          name: manager.name,
+                          company: manager.company || "",
+                          phone: manager.phone || "",
+                          email: manager.email || "",
+                          notes: manager.notes || "",
+                        }
+                      : null
+                  }
+                />
+              </div>
+            ) : (
+              <p className="mt-4 text-base text-[var(--muted-foreground)]">
+                Ask a family administrator to add or edit the property manager.
+              </p>
+            )}
+          </div>
+
           {property.owners.length ? (
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)] p-4">
               <h2 className="text-2xl font-semibold">Owners</h2>
@@ -501,19 +559,28 @@ export default async function PropertyDetailPage({
               </ul>
             </div>
           ) : null}
-          {property.contacts.map((item) => (
-            <article key={item.id} className="rounded-2xl border border-[var(--border)] bg-white p-4">
-              <p className="text-xl font-semibold">{item.contact.name}</p>
-              <p className="text-lg">
-                {item.role.replaceAll("_", " ")}
-                {item.isEmergency ? " · Emergency contact" : ""}
-              </p>
-              <p className="text-lg">{item.contact.company}</p>
-              <p className="text-lg">
-                {item.contact.phone || "No phone"} · {item.contact.email || "No email"}
-              </p>
-            </article>
-          ))}
+
+          {otherContacts.length ? (
+            <div className="space-y-3">
+              <h2 className="text-2xl font-semibold">Other contacts</h2>
+              {otherContacts.map((item) => (
+                <article
+                  key={item.id}
+                  className="rounded-2xl border border-[var(--border)] bg-white p-4"
+                >
+                  <p className="text-xl font-semibold">{item.contact.name}</p>
+                  <p className="text-lg">
+                    {item.role.replaceAll("_", " ")}
+                    {item.isEmergency ? " · Emergency contact" : ""}
+                  </p>
+                  <p className="text-lg">{item.contact.company}</p>
+                  <p className="text-lg">
+                    {item.contact.phone || "No phone"} · {item.contact.email || "No email"}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : null}
         </section>
       ) : null}
 

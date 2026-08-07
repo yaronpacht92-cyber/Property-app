@@ -471,3 +471,93 @@ export async function overrideValuationAction(propertyId: string, formData: Form
   revalidatePath(`/properties/${propertyId}`);
   return { success: "Estimated value updated. This is still an estimate, not a guaranteed appraisal." };
 }
+
+export async function upsertPropertyManagerAction(propertyId: string, formData: FormData) {
+  const session = await requirePermission(PERMISSIONS.PROPERTIES_WRITE);
+  const property = await assertPropertyAccess(
+    propertyId,
+    session.user.organizationId,
+    session.user.id,
+    session.user.roleKey,
+  );
+  if (!property) return { error: "We could not find that property." };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const company = String(formData.get("company") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const emailRaw = String(formData.get("email") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  if (name.length < 2) {
+    return { error: "Please enter the property manager’s name." };
+  }
+
+  let email: string | null = null;
+  if (emailRaw) {
+    const emailCheck = z.string().email().safeParse(emailRaw);
+    if (!emailCheck.success) {
+      return { error: "Please enter a valid email address, or leave email blank." };
+    }
+    email = emailCheck.data;
+  }
+
+  const existing = await prisma.propertyContact.findFirst({
+    where: { propertyId, role: "PROPERTY_MANAGER" },
+    include: { contact: true },
+  });
+
+  if (existing) {
+    await prisma.contact.update({
+      where: { id: existing.contactId },
+      data: {
+        name,
+        company: company || null,
+        phone: phone || null,
+        email,
+        notes: notes || null,
+      },
+    });
+    await prisma.propertyContact.update({
+      where: { id: existing.id },
+      data: { isEmergency: true },
+    });
+  } else {
+    const contact = await prisma.contact.create({
+      data: {
+        organizationId: session.user.organizationId,
+        name,
+        company: company || null,
+        phone: phone || null,
+        email,
+        notes: notes || null,
+      },
+    });
+    await prisma.propertyContact.create({
+      data: {
+        propertyId,
+        contactId: contact.id,
+        role: "PROPERTY_MANAGER",
+        isEmergency: true,
+      },
+    });
+  }
+
+  await writeAuditLog({
+    organizationId: session.user.organizationId,
+    actorUserId: session.user.id,
+    action: existing ? "property.manager_updated" : "property.manager_added",
+    entityType: "Property",
+    entityId: propertyId,
+    summary: `${existing ? "Updated" : "Added"} property manager ${name} for ${property.nickname}`,
+  });
+
+  revalidatePath(`/properties/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}/contact-manager`);
+  revalidatePath("/properties");
+  revalidatePath("/home");
+  return {
+    success: existing
+      ? "Property manager updated."
+      : "Property manager added.",
+  };
+}

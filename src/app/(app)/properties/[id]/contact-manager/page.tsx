@@ -40,8 +40,11 @@ export default async function ContactManagerPage({
       <div className="space-y-4">
         <BackLink href={`/properties/${id}`} label="Back to Property" />
         <Alert tone="warning" title="No property manager on file">
-          Ask a family administrator to add a property manager contact.
+          Open the property Contacts tab to add or edit a property manager.
         </Alert>
+        <Button asChild variant="secondary">
+          <Link href={`/properties/${id}?tab=contacts`}>Go to Contacts</Link>
+        </Button>
       </div>
     );
   }
