@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requirePermission, assertPropertyAccess } from "@/lib/session";
@@ -152,174 +153,206 @@ export async function createPropertyAction(formData: FormData) {
   }
 
   const data = parsed.data;
-  const ownershipEntityId = await resolveOwnershipEntityId({
-    organizationId: session.user.organizationId,
-    ownershipMode: data.ownershipMode,
-    ownershipEntityId: data.ownershipEntityId,
-    newEntityName: data.newEntityName,
-    newEntityType: data.newEntityType,
-  });
-
-  const property = await prisma.property.create({
-    data: {
-      organizationId: session.user.organizationId,
-      nickname: data.nickname,
-      streetAddress: data.streetAddress,
-      city: data.city,
-      state: data.state.toUpperCase(),
-      zipCode: data.zipCode,
-      propertyType: data.propertyType,
-      ownershipEntityId,
-      dateAcquired: data.dateAcquired ? new Date(data.dateAcquired) : null,
-      purchasePrice: money(data.purchasePrice),
-      monthlyRent: money(data.monthlyRent),
-      leaseLengthMonths: months(data.leaseLengthMonths),
-      leaseExpiresAt: data.leaseExpiresAt ? new Date(data.leaseExpiresAt) : null,
-      monthlyManagementFee: money(data.monthlyManagementFee),
-      otherMonthlyExpenses: money(data.otherMonthlyExpenses),
-      bedrooms: intOrNull(data.bedrooms),
-      bathrooms: decimalOrNull(data.bathrooms),
-      squareFootage: intOrNull(data.squareFootage),
-      lotSizeSqFt: intOrNull(data.lotSizeSqFt),
-      yearBuilt: intOrNull(data.yearBuilt),
-      createdById: session.user.id,
-      updatedById: session.user.id,
-    },
-  });
-
-  if (ownershipEntityId) {
-    await prisma.propertyOwnership.create({
-      data: {
-        propertyId: property.id,
-        ownershipEntityId,
-        ownershipPercent: 100,
-        startDate: data.dateAcquired ? new Date(data.dateAcquired) : new Date(),
-      },
-    });
+  const organizationId = session.user.organizationId;
+  if (!organizationId) {
+    return {
+      error: "Your sign-in session is missing family access. Please sign out and sign in again.",
+    };
   }
 
-  await replaceOwners(property.id, parseOwners(data.ownersJson));
+  const organization = await prisma.organization.findFirst({
+    where: { id: organizationId },
+    select: { id: true },
+  });
+  if (!organization) {
+    return {
+      error: "Your sign-in session is out of date. Please sign out and sign in again, then save.",
+    };
+  }
 
-  if (data.leaseExpiresAt) {
-    const due = new Date(data.leaseExpiresAt);
-    if (due > new Date()) {
-      await prisma.reminder.create({
+  try {
+    const ownershipEntityId = await resolveOwnershipEntityId({
+      organizationId,
+      ownershipMode: data.ownershipMode,
+      ownershipEntityId: data.ownershipEntityId,
+      newEntityName: data.newEntityName,
+      newEntityType: data.newEntityType,
+    });
+
+    const property = await prisma.property.create({
+      data: {
+        organizationId,
+        nickname: data.nickname,
+        streetAddress: data.streetAddress,
+        city: data.city,
+        state: data.state.toUpperCase(),
+        zipCode: data.zipCode,
+        propertyType: data.propertyType,
+        ownershipEntityId,
+        dateAcquired: data.dateAcquired ? new Date(data.dateAcquired) : null,
+        purchasePrice: money(data.purchasePrice),
+        monthlyRent: money(data.monthlyRent),
+        leaseLengthMonths: months(data.leaseLengthMonths),
+        leaseExpiresAt: data.leaseExpiresAt ? new Date(data.leaseExpiresAt) : null,
+        monthlyManagementFee: money(data.monthlyManagementFee),
+        otherMonthlyExpenses: money(data.otherMonthlyExpenses),
+        bedrooms: intOrNull(data.bedrooms),
+        bathrooms: decimalOrNull(data.bathrooms),
+        squareFootage: intOrNull(data.squareFootage),
+        lotSizeSqFt: intOrNull(data.lotSizeSqFt),
+        yearBuilt: intOrNull(data.yearBuilt),
+        createdById: session.user.id,
+        updatedById: session.user.id,
+      },
+    });
+
+    if (ownershipEntityId) {
+      await prisma.propertyOwnership.create({
         data: {
-          organizationId: session.user.organizationId,
           propertyId: property.id,
-          type: "LEASE_EXPIRATION",
-          title: `Lease expires — ${property.nickname}`,
-          description: "Review or renew the lease before it ends.",
-          dueDate: due,
-          status:
-            due.getTime() - Date.now() < 1000 * 60 * 60 * 24 * 30 ? "DUE_SOON" : "UPCOMING",
-          assignedToId: session.user.id,
+          ownershipEntityId,
+          ownershipPercent: 100,
+          startDate: data.dateAcquired ? new Date(data.dateAcquired) : new Date(),
         },
       });
     }
-  }
 
-  if (data.estimatedValue) {
-    await prisma.propertyValuation.create({
-      data: {
-        propertyId: property.id,
-        estimatedValue: money(data.estimatedValue) ?? 0,
-        source: "Manual entry",
-        sourceUpdatedAt: new Date(),
-        isEstimated: true,
-        isManualOverride: true,
-        createdById: session.user.id,
-      },
-    });
-  }
+    await replaceOwners(property.id, parseOwners(data.ownersJson));
 
-  if (data.assessedValue || data.annualTaxes || data.taxJurisdiction) {
-    await prisma.propertyTaxRecord.create({
-      data: {
-        propertyId: property.id,
-        assessedValue: money(data.assessedValue),
-        annualTax: money(data.annualTaxes),
-        jurisdiction: data.taxJurisdiction || null,
-        source: "manual",
-        isManualOverride: true,
-        sourceUpdatedAt: new Date(),
-      },
-    });
-  }
-
-  if (data.managerName) {
-    const contact = await prisma.contact.create({
-      data: {
-        organizationId: session.user.organizationId,
-        name: data.managerName,
-        company: data.managerCompany || null,
-        phone: data.managerPhone || null,
-        email: data.managerEmail || null,
-      },
-    });
-    await prisma.propertyContact.create({
-      data: {
-        propertyId: property.id,
-        contactId: contact.id,
-        role: "PROPERTY_MANAGER",
-        isEmergency: true,
-      },
-    });
-  }
-
-  if (data.insuranceCarrier || data.insurancePolicyNumber) {
-    const renewal = data.insuranceRenewalDate ? new Date(data.insuranceRenewalDate) : null;
-    await prisma.insurancePolicy.create({
-      data: {
-        propertyId: property.id,
-        carrier: data.insuranceCarrier || null,
-        policyNumber: data.insurancePolicyNumber || null,
-        renewalDate: renewal,
-        status: renewal
-          ? renewal < new Date()
-            ? "EXPIRED"
-            : renewal.getTime() - Date.now() < 1000 * 60 * 60 * 24 * 90
-              ? "RENEWAL_COMING_UP"
-              : "ACTIVE"
-          : "MISSING_INFORMATION",
-      },
-    });
-
-    if (renewal) {
-      for (const days of [90, 60, 30, 7]) {
-        const due = new Date(renewal);
-        due.setDate(due.getDate() - days);
-        if (due < new Date()) continue;
+    if (data.leaseExpiresAt) {
+      const due = new Date(data.leaseExpiresAt);
+      if (due > new Date()) {
         await prisma.reminder.create({
           data: {
-            organizationId: session.user.organizationId,
+            organizationId,
             propertyId: property.id,
-            type: "INSURANCE_RENEWAL",
-            title: `Insurance renewal in ${days} days — ${property.nickname}`,
-            description: `Reminder to review insurance for ${property.nickname}.`,
+            type: "LEASE_EXPIRATION",
+            title: `Lease expires — ${property.nickname}`,
+            description: "Review or renew the lease before it ends.",
             dueDate: due,
-            status: days <= 30 ? "DUE_SOON" : "UPCOMING",
+            status:
+              due.getTime() - Date.now() < 1000 * 60 * 60 * 24 * 30 ? "DUE_SOON" : "UPCOMING",
             assignedToId: session.user.id,
-            scheduleOffsets: [90, 60, 30, 7],
           },
         });
       }
     }
+
+    if (data.estimatedValue) {
+      await prisma.propertyValuation.create({
+        data: {
+          propertyId: property.id,
+          estimatedValue: money(data.estimatedValue) ?? 0,
+          source: "Manual entry",
+          sourceUpdatedAt: new Date(),
+          isEstimated: true,
+          isManualOverride: true,
+          createdById: session.user.id,
+        },
+      });
+    }
+
+    if (data.assessedValue || data.annualTaxes || data.taxJurisdiction) {
+      await prisma.propertyTaxRecord.create({
+        data: {
+          propertyId: property.id,
+          assessedValue: money(data.assessedValue),
+          annualTax: money(data.annualTaxes),
+          jurisdiction: data.taxJurisdiction || null,
+          source: "manual",
+          isManualOverride: true,
+          sourceUpdatedAt: new Date(),
+        },
+      });
+    }
+
+    if (data.managerName) {
+      const contact = await prisma.contact.create({
+        data: {
+          organizationId,
+          name: data.managerName,
+          company: data.managerCompany || null,
+          phone: data.managerPhone || null,
+          email: data.managerEmail || null,
+        },
+      });
+      await prisma.propertyContact.create({
+        data: {
+          propertyId: property.id,
+          contactId: contact.id,
+          role: "PROPERTY_MANAGER",
+          isEmergency: true,
+        },
+      });
+    }
+
+    if (data.insuranceCarrier || data.insurancePolicyNumber) {
+      const renewal = data.insuranceRenewalDate ? new Date(data.insuranceRenewalDate) : null;
+      await prisma.insurancePolicy.create({
+        data: {
+          propertyId: property.id,
+          carrier: data.insuranceCarrier || null,
+          policyNumber: data.insurancePolicyNumber || null,
+          renewalDate: renewal,
+          status: renewal
+            ? renewal < new Date()
+              ? "EXPIRED"
+              : renewal.getTime() - Date.now() < 1000 * 60 * 60 * 24 * 90
+                ? "RENEWAL_COMING_UP"
+                : "ACTIVE"
+            : "MISSING_INFORMATION",
+        },
+      });
+
+      if (renewal) {
+        for (const days of [90, 60, 30, 7]) {
+          const due = new Date(renewal);
+          due.setDate(due.getDate() - days);
+          if (due < new Date()) continue;
+          await prisma.reminder.create({
+            data: {
+              organizationId,
+              propertyId: property.id,
+              type: "INSURANCE_RENEWAL",
+              title: `Insurance renewal in ${days} days — ${property.nickname}`,
+              description: `Reminder to review insurance for ${property.nickname}.`,
+              dueDate: due,
+              status: days <= 30 ? "DUE_SOON" : "UPCOMING",
+              assignedToId: session.user.id,
+              scheduleOffsets: [90, 60, 30, 7],
+            },
+          });
+        }
+      }
+    }
+
+    await writeAuditLog({
+      organizationId,
+      actorUserId: session.user.id,
+      action: "property.created",
+      entityType: "Property",
+      entityId: property.id,
+      summary: `Added property ${property.nickname}`,
+    });
+
+    revalidatePath("/home");
+    revalidatePath("/properties");
+    revalidatePath("/financials");
+    redirect(`/properties/${property.id}?created=1`);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2003") {
+        return {
+          error:
+            "We could not save this property because your session or ownership choice is out of date. Sign out, sign in again, reopen Add Property, and try once more.",
+        };
+      }
+      console.error("property_create_failed", { code: error.code });
+      return { error: "We could not save that property. Please check the details and try again." };
+    }
+    // Auth.js / Next.js redirect throws — rethrow so navigation still works.
+    throw error;
   }
-
-  await writeAuditLog({
-    organizationId: session.user.organizationId,
-    actorUserId: session.user.id,
-    action: "property.created",
-    entityType: "Property",
-    entityId: property.id,
-    summary: `Added property ${property.nickname}`,
-  });
-
-  revalidatePath("/home");
-  revalidatePath("/properties");
-  revalidatePath("/financials");
-  redirect(`/properties/${property.id}?created=1`);
 }
 
 export async function archivePropertyAction(propertyId: string) {

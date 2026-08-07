@@ -138,6 +138,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.permissions = u.permissions;
         token.mfaEnabled = u.mfaEnabled;
       }
+
+      // Refresh membership from the database so sessions stay valid after reseeds/migrations.
+      if (token.sub) {
+        const membership = await prisma.membership.findFirst({
+          where: { userId: token.sub, status: "ACTIVE" },
+          include: {
+            role: { include: { permissions: { include: { permission: true } } } },
+            organization: true,
+          },
+          orderBy: { createdAt: "asc" },
+        });
+        if (membership) {
+          token.organizationId = membership.organizationId;
+          token.organizationName = membership.organization.name;
+          token.roleKey = membership.role.key;
+          token.roleName = membership.role.name;
+          token.permissions = membership.role.permissions.map((rp) => rp.permission.key);
+        } else {
+          token.organizationId = "";
+          token.organizationName = "";
+          token.roleKey = "";
+          token.roleName = "";
+          token.permissions = [];
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {

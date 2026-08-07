@@ -5,8 +5,21 @@ import { BackLink } from "@/components/layout/back-link";
 import { AddPropertyWizard } from "@/components/properties/add-property-wizard";
 
 export default async function NewPropertyPage() {
-  await requirePermission(PERMISSIONS.PROPERTIES_WRITE);
   const session = await requirePermission(PERMISSIONS.PROPERTIES_WRITE);
+
+  if (!session.user.organizationId) {
+    return (
+      <div className="space-y-6 animate-fade-up">
+        <BackLink href="/properties" label="Back to Properties" />
+        <h1 className="text-4xl font-semibold">Add a Property</h1>
+        <p className="text-xl text-[var(--muted-foreground)]">
+          Your sign-in session is out of date. Please sign out and sign in again before adding a
+          property.
+        </p>
+      </div>
+    );
+  }
+
   const entities = await prisma.ownershipEntity.findMany({
     where: { organizationId: session.user.organizationId, deletedAt: null },
     orderBy: { name: "asc" },
@@ -23,6 +36,7 @@ export default async function NewPropertyPage() {
         </p>
       </div>
       <AddPropertyWizard
+        key={session.user.organizationId}
         ownershipEntities={entities.map((e) => ({
           id: e.id,
           name: e.name,
