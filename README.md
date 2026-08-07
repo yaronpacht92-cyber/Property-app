@@ -112,7 +112,7 @@ Weekly refresh is also available at `/api/cron/weekly-property-refresh` (secured
 
 | Feature | Development default | Production path |
 |---------|---------------------|-----------------|
-| Property valuation/tax | Mock sample provider | Licensed API adapter |
+| Property valuation/tax | Public county GIS when covered (e.g. Montgomery County, AL); else mock | Same + optional licensed API adapter |
 | QuickBooks | Not configured / sample txn refs | OAuth 2.0 read-only sync |
 | Gmail / Microsoft | Not configured / sample threads | OAuth matching |
 | File storage | Local disk under `storage/uploads` | Private S3-compatible bucket + signed URLs |

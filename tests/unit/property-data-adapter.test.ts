@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getPropertyDataProvider } from "@/adapters/property-data";
 import { MockPropertyDataProvider } from "@/adapters/property-data/mock";
 
 describe("property data adapter", () => {
@@ -27,6 +28,18 @@ describe("property data adapter", () => {
     expect(snapshot.characteristics?.bedrooms).toBeTruthy();
     expect(snapshot.saleHistory.length).toBeGreaterThan(0);
     expect(snapshot.photo?.source.toLowerCase()).toContain("sample");
+  });
+
+  it("wires auto mode to the routing provider by default", () => {
+    const previous = process.env.PROPERTY_DATA_PROVIDER;
+    process.env.PROPERTY_DATA_PROVIDER = "auto";
+    try {
+      const provider = getPropertyDataProvider();
+      expect(provider.name).toBe("routing-property-data");
+    } finally {
+      if (previous === undefined) delete process.env.PROPERTY_DATA_PROVIDER;
+      else process.env.PROPERTY_DATA_PROVIDER = previous;
+    }
   });
 });
 

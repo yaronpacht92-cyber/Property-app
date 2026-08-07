@@ -153,28 +153,57 @@ export async function refreshPropertyPublicData(options: {
       }
     }
 
-    // Characteristics
+    // Characteristics — only apply non-null provider fields so partial county
+    // feeds (e.g. lot size only) do not wipe beds/baths/sqft already on file.
     if (snapshot.characteristics) {
       const chars = snapshot.characteristics;
+      const data: {
+        bedrooms?: number | null;
+        bathrooms?: number | null;
+        squareFootage?: number | null;
+        lotSizeSqFt?: number | null;
+        yearBuilt?: number | null;
+        propertyFeaturesSource: string;
+        propertyFeaturesUpdatedAt: Date;
+      } = {
+        propertyFeaturesSource: chars.source,
+        propertyFeaturesUpdatedAt: chars.sourceUpdatedAt,
+      };
+      let changed = false;
+      if (chars.bedrooms !== null && chars.bedrooms !== property.bedrooms) {
+        data.bedrooms = chars.bedrooms;
+        changed = true;
+      }
+      if (
+        chars.bathrooms !== null &&
+        valuesDiffer(chars.bathrooms, decimalNumber(property.bathrooms))
+      ) {
+        data.bathrooms = chars.bathrooms;
+        changed = true;
+      }
+      if (
+        chars.squareFootage !== null &&
+        chars.squareFootage !== property.squareFootage
+      ) {
+        data.squareFootage = chars.squareFootage;
+        changed = true;
+      }
+      if (
+        chars.lotSizeSqFt !== null &&
+        chars.lotSizeSqFt !== property.lotSizeSqFt
+      ) {
+        data.lotSizeSqFt = chars.lotSizeSqFt;
+        changed = true;
+      }
+      if (chars.yearBuilt !== null && chars.yearBuilt !== property.yearBuilt) {
+        data.yearBuilt = chars.yearBuilt;
+        changed = true;
+      }
       const newer = isNewer(chars.sourceUpdatedAt, property.propertyFeaturesUpdatedAt);
-      const changed =
-        chars.bedrooms !== property.bedrooms ||
-        valuesDiffer(chars.bathrooms, decimalNumber(property.bathrooms)) ||
-        chars.squareFootage !== property.squareFootage ||
-        chars.lotSizeSqFt !== property.lotSizeSqFt ||
-        chars.yearBuilt !== property.yearBuilt;
-      if (newer && changed) {
+      if (changed && (newer || !property.propertyFeaturesUpdatedAt)) {
         await prisma.property.update({
           where: { id: property.id },
-          data: {
-            bedrooms: chars.bedrooms,
-            bathrooms: chars.bathrooms,
-            squareFootage: chars.squareFootage,
-            lotSizeSqFt: chars.lotSizeSqFt,
-            yearBuilt: chars.yearBuilt,
-            propertyFeaturesSource: chars.source,
-            propertyFeaturesUpdatedAt: chars.sourceUpdatedAt,
-          },
+          data,
         });
         fieldsUpdated.push("Property characteristics");
       }

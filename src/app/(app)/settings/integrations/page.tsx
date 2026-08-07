@@ -28,6 +28,8 @@ export default async function IntegrationsPage() {
   const qb = getAccountingAdapter();
   const mail = getEmailAdapter();
   const propertyData = getPropertyDataProvider();
+  const propertyDataStatus = await propertyData.getConnectionStatus();
+  const propertyDataMode = (process.env.PROPERTY_DATA_PROVIDER || "auto").toLowerCase();
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -50,8 +52,8 @@ export default async function IntegrationsPage() {
       />
       <IntegrationCard
         title="Property data provider"
-        status="NOT_CONFIGURED"
-        detail={`Adapter: ${propertyData.name}. Uses a licensed provider when configured. Never scrapes websites. Manual entry and overrides are always available.`}
+        status={propertyDataStatus === "ready" ? "CONNECTED" : "NOT_CONFIGURED"}
+        detail={`Adapter: ${propertyData.name} (mode: ${propertyDataMode}). Uses public county GIS parcels when the address is covered (starting with Montgomery County, AL), otherwise sample mock data. Licensed commercial providers can be added later. Never scrapes consumer websites. Manual entry and overrides are always available.`}
       />
 
       <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6">

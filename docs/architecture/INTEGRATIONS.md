@@ -36,9 +36,10 @@ Mock adapters are used when credentials are missing. The UI labels sample/not-co
 
 ## Property data providers (Phase 2)
 
-1. Choose a licensed provider (never scrape Zillow or similar).
-2. Set `PROPERTY_DATA_PROVIDER` and `PROPERTY_DATA_API_KEY`.
-3. UI always shows source, last updated, estimated flag, refresh, and manual override.
+1. Default `PROPERTY_DATA_PROVIDER=auto` uses public county GIS when the address is covered (see `county-layers.ts`), otherwise the labeled mock provider.
+2. Optional licensed commercial providers plug in with `PROPERTY_DATA_API_KEY` (never scrape Zillow or similar).
+3. UI always shows source, last updated, estimated flag (for market estimates), refresh, and manual override.
+4. Assessor totals from county GIS are shown as assessed value, not market estimates.
 
 ## File storage
 
