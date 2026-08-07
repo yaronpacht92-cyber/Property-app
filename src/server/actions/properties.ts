@@ -318,6 +318,7 @@ export async function createPropertyAction(formData: FormData) {
 
   revalidatePath("/home");
   revalidatePath("/properties");
+  revalidatePath("/financials");
   redirect(`/properties/${property.id}?created=1`);
 }
 
@@ -353,6 +354,7 @@ export async function archivePropertyAction(propertyId: string) {
 
   revalidatePath("/properties");
   revalidatePath("/home");
+  revalidatePath("/financials");
   redirect("/properties?archived=1");
 }
 

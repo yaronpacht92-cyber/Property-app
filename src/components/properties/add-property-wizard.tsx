@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { HelpTip } from "@/components/ui/help-tip";
 import { createPropertyAction } from "@/server/actions/properties";
+import { PropertyDocumentImport } from "@/components/properties/property-document-import";
+import type { ExtractedPropertyFields } from "@/lib/document-property-extract";
 
 const STEPS = [
   "Basic Information",
@@ -84,6 +86,52 @@ export function AddPropertyWizard({ ownershipEntities }: Props) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  function applyExtractedFields(fields: ExtractedPropertyFields) {
+    setForm((prev) => {
+      const next = { ...prev };
+      (Object.keys(fields) as (keyof ExtractedPropertyFields)[]).forEach((key) => {
+        const value = fields[key];
+        if (value && key in next) {
+          // Prefer document values for empty fields; overwrite only when still blank
+          // except nickname/address/core financial fields which users expect to fill from the doc.
+          const current = next[key as keyof typeof next];
+          const preferOverwrite = [
+            "streetAddress",
+            "city",
+            "state",
+            "zipCode",
+            "nickname",
+            "purchasePrice",
+            "estimatedValue",
+            "assessedValue",
+            "annualTaxes",
+            "monthlyRent",
+            "bedrooms",
+            "bathrooms",
+            "squareFootage",
+            "lotSizeSqFt",
+            "yearBuilt",
+            "dateAcquired",
+            "propertyType",
+            "insuranceCarrier",
+            "insurancePolicyNumber",
+            "insuranceRenewalDate",
+            "managerName",
+            "leaseExpiresAt",
+            "leaseLengthMonths",
+            "monthlyManagementFee",
+            "taxJurisdiction",
+          ].includes(key);
+          if (preferOverwrite || !current) {
+            (next as Record<string, string>)[key] = value;
+          }
+        }
+      });
+      return next;
+    });
+    setError(null);
+  }
+
   function updateOwner(index: number, key: keyof OwnerDraft, value: string) {
     setOwners((prev) => prev.map((owner, i) => (i === index ? { ...owner, [key]: value } : owner)));
   }
@@ -158,6 +206,7 @@ export function AddPropertyWizard({ ownershipEntities }: Props) {
       <div className="mt-8 space-y-5">
         {step === 0 ? (
           <>
+            <PropertyDocumentImport onApply={applyExtractedFields} />
             <Field label="Property nickname" tip="A short name your family uses, like Oak Street Rental.">
               <Input value={form.nickname} onChange={(e) => update("nickname", e.target.value)} />
             </Field>

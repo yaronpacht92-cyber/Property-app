@@ -40,6 +40,7 @@ Mock adapters are used for QuickBooks and email when credentials are missing. Th
 - Development: `FILE_STORAGE_DRIVER=local`
 - Production: S3-compatible bucket, private ACL, short-lived signed download URLs
 - Uploads validated by MIME allowlist + size limit + malware scan job
+- **Add Property → Import from a document** can read a user-uploaded PDF/scan/text file on the server (OCR for images) and suggest form fields. It does not scrape Zillow, Redfin, or other listing sites. Always review autofilled values.
 
 ## Token storage
 
