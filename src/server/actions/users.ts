@@ -41,7 +41,7 @@ export async function addUserAction(formData: FormData) {
   const email = parsed.data.email.toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    return { error: "Someone with that email is already in Homefolio." };
+    return { error: "Someone with that email is already in Pachtfolio." };
   }
 
   const user = await prisma.user.create({

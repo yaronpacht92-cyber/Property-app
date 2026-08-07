@@ -9,7 +9,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 async function main() {
-  console.log("Seeding Homefolio sample data...");
+  console.log("Seeding Pachtfolio sample data...");
 
   await prisma.auditLog.deleteMany();
   await prisma.financialTransactionReference.deleteMany();
@@ -29,6 +29,7 @@ async function main() {
   await prisma.propertyContact.deleteMany();
   await prisma.propertyAssignment.deleteMany();
   await prisma.propertyOwnership.deleteMany();
+  await prisma.propertyOwner.deleteMany();
   await prisma.property.deleteMany();
   await prisma.contractor.deleteMany();
   await prisma.contact.deleteMany();
@@ -84,14 +85,14 @@ async function main() {
     }
   }
 
-  const passwordHash = await bcrypt.hash("ChangeMe!Homefolio1", 12);
+  const passwordHash = await bcrypt.hash("ChangeMe!Pachtfolio1", 12);
   const adminRole = roles.find((r) => r.key === ROLE_KEYS.ADMIN)!;
   const memberRole = roles.find((r) => r.key === ROLE_KEYS.MEMBER)!;
   const readOnlyRole = roles.find((r) => r.key === ROLE_KEYS.READ_ONLY)!;
 
   const admin = await prisma.user.create({
     data: {
-      email: "admin@homefolio.local",
+      email: "admin@pachtfolio.local",
       name: "Pat Administrator",
       passwordHash,
       memberships: {
@@ -102,7 +103,7 @@ async function main() {
 
   const member = await prisma.user.create({
     data: {
-      email: "member@homefolio.local",
+      email: "member@pachtfolio.local",
       name: "Sam Family Member",
       passwordHash,
       memberships: {
@@ -113,7 +114,7 @@ async function main() {
 
   const reader = await prisma.user.create({
     data: {
-      email: "readonly@homefolio.local",
+      email: "readonly@pachtfolio.local",
       name: "Riley Read Only",
       passwordHash,
       memberships: {
@@ -180,10 +181,17 @@ async function main() {
       ownershipEntityId: llc.id,
       dateAcquired: new Date("2018-04-12"),
       purchasePrice: 365000,
+      monthlyRent: 2400,
+      leaseLengthMonths: 12,
+      leaseExpiresAt: daysFromNow(120),
       value: 485000,
       tax: 9200,
       assessed: 410000,
       managerId: manager.id,
+      owners: [
+        { name: "Pat Pacht", email: "admin@pachtfolio.local", ownershipPercent: 60 },
+        { name: "Sam Pacht", email: "member@pachtfolio.local", ownershipPercent: 40 },
+      ],
       description: "Single-family rental",
     },
     {
@@ -196,10 +204,14 @@ async function main() {
       ownershipEntityId: trust.id,
       dateAcquired: new Date("2015-09-01"),
       purchasePrice: 1850000,
+      monthlyRent: 18500,
+      leaseLengthMonths: 12,
+      leaseExpiresAt: daysFromNow(75),
       value: 2450000,
       tax: 38500,
       assessed: 2100000,
       managerId: manager.id,
+      owners: [{ name: "Pat Pacht", email: "admin@pachtfolio.local", ownershipPercent: 100 }],
       description: "Apartment building",
     },
     {
@@ -212,10 +224,17 @@ async function main() {
       ownershipEntityId: llc.id,
       dateAcquired: new Date("2020-01-20"),
       purchasePrice: 980000,
+      monthlyRent: 7800,
+      leaseLengthMonths: 36,
+      leaseExpiresAt: daysFromNow(400),
       value: 1125000,
       tax: 21400,
       assessed: 1000000,
       managerId: manager.id,
+      owners: [
+        { name: "Pat Pacht", ownershipPercent: 50 },
+        { name: "Sam Pacht", ownershipPercent: 50 },
+      ],
       description: "Commercial property",
     },
     {
@@ -228,10 +247,14 @@ async function main() {
       ownershipEntityId: trust.id,
       dateAcquired: new Date("2012-06-15"),
       purchasePrice: 120000,
+      monthlyRent: null,
+      leaseLengthMonths: null,
+      leaseExpiresAt: null,
       value: 210000,
       tax: 1800,
       assessed: 150000,
       managerId: null,
+      owners: [{ name: "Pat Pacht", ownershipPercent: 100 }],
       description: "Vacant land",
     },
     {
@@ -244,10 +267,17 @@ async function main() {
       ownershipEntityId: trust.id,
       dateAcquired: new Date("2019-07-04"),
       purchasePrice: 540000,
+      monthlyRent: 3200,
+      leaseLengthMonths: 6,
+      leaseExpiresAt: daysFromNow(45),
       value: 695000,
       tax: 11200,
       assessed: 620000,
       managerId: manager.id,
+      owners: [
+        { name: "Pat Pacht", ownershipPercent: 50 },
+        { name: "Riley Pacht", email: "readonly@pachtfolio.local", ownershipPercent: 50 },
+      ],
       description: "Vacation property",
     },
   ];
@@ -266,12 +296,35 @@ async function main() {
         zipCode: item.zipCode,
         dateAcquired: item.dateAcquired,
         purchasePrice: item.purchasePrice,
+        monthlyRent: item.monthlyRent,
+        leaseLengthMonths: item.leaseLengthMonths,
+        leaseExpiresAt: item.leaseExpiresAt,
         isSampleData: true,
         createdById: admin.id,
         updatedById: admin.id,
       },
     });
     createdProperties.push(property);
+
+    await prisma.propertyOwnership.create({
+      data: {
+        propertyId: property.id,
+        ownershipEntityId: item.ownershipEntityId,
+        ownershipPercent: 100,
+        startDate: item.dateAcquired,
+      },
+    });
+
+    if (item.owners.length) {
+      await prisma.propertyOwner.createMany({
+        data: item.owners.map((owner) => ({
+          propertyId: property.id,
+          name: owner.name,
+          email: "email" in owner ? owner.email || null : null,
+          ownershipPercent: owner.ownershipPercent,
+        })),
+      });
+    }
 
     await prisma.propertyValuation.create({
       data: {
@@ -627,9 +680,9 @@ async function main() {
 
   console.log("Seed complete.");
   console.log("Demo logins (sample data):");
-  console.log("  admin@homefolio.local / ChangeMe!Homefolio1");
-  console.log("  member@homefolio.local / ChangeMe!Homefolio1");
-  console.log("  readonly@homefolio.local / ChangeMe!Homefolio1");
+  console.log("  admin@pachtfolio.local / ChangeMe!Pachtfolio1");
+  console.log("  member@pachtfolio.local / ChangeMe!Pachtfolio1");
+  console.log("  readonly@pachtfolio.local / ChangeMe!Pachtfolio1");
 }
 
 function daysFromNow(days: number) {

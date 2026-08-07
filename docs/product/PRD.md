@@ -1,6 +1,6 @@
 # Product Requirements Document — Family Property Portfolio
 
-**Product name:** Homefolio  
+**Product name:** Pachtfolio  
 **Version:** 1.0 (Phase 1 Foundation)  
 **Audience:** Older adults managing a family real estate portfolio  
 **Primary priority:** Ease of use

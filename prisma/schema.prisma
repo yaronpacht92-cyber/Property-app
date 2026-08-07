@@ -1,4 +1,4 @@
-// Homefolio — Family Property Portfolio
+// Pachtfolio — Family Property Portfolio
 // PostgreSQL + Prisma. All portfolio records scoped by organizationId.
 
 generator client {
@@ -292,6 +292,9 @@ model Property {
   zipCode           String
   dateAcquired      DateTime?
   purchasePrice     Decimal?            @db.Decimal(14, 2)
+  monthlyRent       Decimal?            @db.Decimal(14, 2)
+  leaseLengthMonths Int?
+  leaseExpiresAt    DateTime?
   photoDocumentId   String?             @db.Uuid
   isSampleData      Boolean             @default(false)
   createdAt         DateTime            @default(now())
@@ -302,6 +305,7 @@ model Property {
   organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   ownershipEntity   OwnershipEntity?    @relation(fields: [ownershipEntityId], references: [id])
   ownerships        PropertyOwnership[]
+  owners            PropertyOwner[]
   contacts          PropertyContact[]
   valuations        PropertyValuation[]
   taxRecords        PropertyTaxRecord[]
@@ -318,6 +322,24 @@ model Property {
 
   @@index([organizationId, deletedAt])
   @@index([organizationId, propertyType])
+  @@index([leaseExpiresAt])
+}
+
+/// Individual people who own (or co-own) a property, with optional ownership share.
+model PropertyOwner {
+  id               String    @id @default(uuid()) @db.Uuid
+  propertyId       String    @db.Uuid
+  name             String
+  email            String?
+  phone            String?
+  ownershipPercent Decimal?  @db.Decimal(5, 2)
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+  property         Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
 }
 
 model PropertyOwnership {

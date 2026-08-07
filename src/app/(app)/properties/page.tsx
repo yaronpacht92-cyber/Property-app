@@ -39,6 +39,8 @@ export default async function PropertiesPage({
     },
     include: {
       valuations: { orderBy: { createdAt: "desc" }, take: 1 },
+      owners: { where: { deletedAt: null }, take: 3 },
+      ownershipEntity: true,
       contacts: {
         where: { role: "PROPERTY_MANAGER" },
         include: { contact: true },
@@ -110,6 +112,7 @@ export default async function PropertiesPage({
             const valuation = property.valuations[0];
             const manager = property.contacts[0]?.contact;
             const reminder = property.reminders[0];
+            const ownerLabel = property.owners.map((o) => o.name).join(", ");
             return (
               <article
                 key={property.id}
@@ -134,10 +137,18 @@ export default async function PropertiesPage({
                   <p className="mt-2 text-lg text-[var(--muted-foreground)]">
                     {propertyTypeLabel(property.propertyType)} · Est.{" "}
                     {formatCurrency(valuation?.estimatedValue?.toString())}
-                    {valuation?.isEstimated ? "*" : ""}
+                    {valuation?.isEstimated ? "*" : ""} · Rent{" "}
+                    {formatCurrency(property.monthlyRent?.toString())}/mo
+                  </p>
+                  <p className="mt-1 text-lg">
+                    Entity: {property.ownershipEntity?.name || "Not set"}
+                    {ownerLabel ? ` · Owners: ${ownerLabel}` : ""}
                   </p>
                   <p className="mt-1 text-lg">
                     Manager: {manager?.name || "Not assigned"}
+                    {property.leaseExpiresAt
+                      ? ` · Lease ends ${formatDate(property.leaseExpiresAt)}`
+                      : ""}
                   </p>
                   {reminder ? (
                     <p className="mt-2 text-lg">

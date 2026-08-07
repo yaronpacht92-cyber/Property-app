@@ -19,7 +19,7 @@ export async function beginMfaSetupAction() {
   });
 
   const otpauthUri = generateURI({
-    issuer: "Homefolio",
+    issuer: "Pachtfolio",
     label: session.user.email || session.user.name || "user",
     secret,
   });

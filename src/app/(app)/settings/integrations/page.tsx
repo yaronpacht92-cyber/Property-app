@@ -33,7 +33,7 @@ export default async function IntegrationsPage() {
     <div className="space-y-6 animate-fade-up">
       <BackLink href="/settings" label="Back to Settings" />
       <h1 className="text-4xl font-semibold">Integrations</h1>
-      <Alert tone="info" title="Core Homefolio works without connections">
+      <Alert tone="info" title="Core Pachtfolio works without connections">
         You can enter property information by hand at any time. Live QuickBooks and email
         connections use secure OAuth and are read-only in the first release.
       </Alert>
@@ -46,7 +46,7 @@ export default async function IntegrationsPage() {
       <IntegrationCard
         title="Email (Gmail / Microsoft)"
         status={email?.status || "NOT_CONFIGURED"}
-        detail={`Adapter: ${mail.name}. Property matching uses addresses, nicknames, and keywords. Sending email from Homefolio is not enabled in version 1.`}
+        detail={`Adapter: ${mail.name}. Property matching uses addresses, nicknames, and keywords. Sending email from Pachtfolio is not enabled in version 1.`}
       />
       <IntegrationCard
         title="Property data provider"

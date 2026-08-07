@@ -50,6 +50,7 @@ export default async function PropertyDetailPage({
     where: { id, organizationId: session.user.organizationId, deletedAt: null },
     include: {
       ownershipEntity: true,
+      owners: { where: { deletedAt: null }, orderBy: { createdAt: "asc" } },
       valuations: { orderBy: { createdAt: "desc" }, take: 3 },
       taxRecords: { orderBy: { createdAt: "desc" }, take: 1 },
       mortgages: { take: 1 },
@@ -84,6 +85,7 @@ export default async function PropertyDetailPage({
   const valuation = property.valuations[0];
   const tax = property.taxRecords[0];
   const manager = property.contacts.find((c) => c.role === "PROPERTY_MANAGER")?.contact;
+  const ownerNames = property.owners.map((owner) => owner.name).filter(Boolean);
   const canEdit = hasPermission(session.user.permissions, PERMISSIONS.PROPERTIES_WRITE);
   const canMaintain = hasPermission(session.user.permissions, PERMISSIONS.MAINTENANCE_WRITE);
   const canDocs = hasPermission(session.user.permissions, PERMISSIONS.DOCUMENTS_WRITE);
@@ -119,16 +121,22 @@ export default async function PropertyDetailPage({
             <p className="mt-2 text-lg text-[var(--muted-foreground)]">
               {propertyTypeLabel(property.propertyType)} · Owned by{" "}
               {property.ownershipEntity?.name || "Not set"}
+              {ownerNames.length ? ` · ${ownerNames.join(", ")}` : ""}
             </p>
             <p className="mt-3 text-lg">
               Est. value {formatCurrency(valuation?.estimatedValue?.toString())}
-              {valuation?.isEstimated ? "*" : ""} · Assessed{" "}
+              {valuation?.isEstimated ? "*" : ""} · Monthly rent{" "}
+              {formatCurrency(property.monthlyRent?.toString())} · Assessed{" "}
               {formatCurrency(tax?.assessedValue?.toString())} · Taxes{" "}
               {formatCurrency(tax?.annualTax?.toString())}/yr
             </p>
             <p className="mt-1 text-lg">
-              Manager: {manager?.name || "Not assigned"} · Last updated{" "}
-              {formatDate(property.updatedAt)}
+              Lease:{" "}
+              {property.leaseLengthMonths
+                ? `${property.leaseLengthMonths} months`
+                : "Length not set"}{" "}
+              · Expires {formatDate(property.leaseExpiresAt)} · Manager:{" "}
+              {manager?.name || "Not assigned"} · Last updated {formatDate(property.updatedAt)}
             </p>
             {property.reminders[0] ? (
               <p className="mt-3">
@@ -210,7 +218,37 @@ export default async function PropertyDetailPage({
             <ul className="space-y-2 text-lg">
               <li>Purchase price: {formatCurrency(property.purchasePrice?.toString())}</li>
               <li>Date acquired: {formatDate(property.dateAcquired)}</li>
-              <li>Insurance status: {property.insurancePolicies[0]?.status.replaceAll("_", " ") || "Missing information"}</li>
+              <li>Current monthly rent: {formatCurrency(property.monthlyRent?.toString())}</li>
+              <li>
+                Lease length:{" "}
+                {property.leaseLengthMonths
+                  ? `${property.leaseLengthMonths} months`
+                  : "Not set"}
+              </li>
+              <li>Lease expiration: {formatDate(property.leaseExpiresAt)}</li>
+              <li>
+                Ownership entity: {property.ownershipEntity?.name || "Not set"}
+                {property.ownershipEntity?.entityType
+                  ? ` (${property.ownershipEntity.entityType})`
+                  : ""}
+              </li>
+              <li>
+                Owner(s):{" "}
+                {ownerNames.length
+                  ? property.owners
+                      .map((owner) =>
+                        owner.ownershipPercent
+                          ? `${owner.name} (${owner.ownershipPercent.toString()}%)`
+                          : owner.name,
+                      )
+                      .join(", ")
+                  : "Not set"}
+              </li>
+              <li>
+                Insurance status:{" "}
+                {property.insurancePolicies[0]?.status.replaceAll("_", " ") ||
+                  "Missing information"}
+              </li>
               <li>Mortgage status: {property.mortgages[0]?.status || "Not set"}</li>
             </ul>
           </InfoPanel>
@@ -246,6 +284,18 @@ export default async function PropertyDetailPage({
 
       {tab === "financials" ? (
         <section className="space-y-4">
+          <InfoPanel title="Rent and lease">
+            <ul className="space-y-2 text-lg">
+              <li>Current monthly rent: {formatCurrency(property.monthlyRent?.toString())}</li>
+              <li>
+                Lease length:{" "}
+                {property.leaseLengthMonths
+                  ? `${property.leaseLengthMonths} months`
+                  : "Not set"}
+              </li>
+              <li>Lease expiration: {formatDate(property.leaseExpiresAt)}</li>
+            </ul>
+          </InfoPanel>
           <InfoPanel title="Valuation">
             <p className="text-lg">
               Current estimate: {formatCurrency(valuation?.estimatedValue?.toString())}
@@ -395,6 +445,24 @@ export default async function PropertyDetailPage({
 
       {tab === "contacts" ? (
         <section className="space-y-3">
+          {property.owners.length ? (
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)] p-4">
+              <h2 className="text-2xl font-semibold">Owners</h2>
+              <ul className="mt-3 space-y-3">
+                {property.owners.map((owner) => (
+                  <li key={owner.id} className="rounded-xl bg-white p-4 text-lg">
+                    <p className="font-semibold">{owner.name}</p>
+                    <p>
+                      {owner.email || "No email"} · {owner.phone || "No phone"}
+                      {owner.ownershipPercent
+                        ? ` · ${owner.ownershipPercent.toString()}% ownership`
+                        : ""}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {property.contacts.map((item) => (
             <article key={item.id} className="rounded-2xl border border-[var(--border)] bg-white p-4">
               <p className="text-xl font-semibold">{item.contact.name}</p>

@@ -1,4 +1,4 @@
-# Sitemap — Homefolio
+# Sitemap — Pachtfolio
 
 ```
 / (redirect → /home or /login)

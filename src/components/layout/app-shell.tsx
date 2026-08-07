@@ -25,7 +25,7 @@ export function AppShell({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-[var(--brand)] md:text-4xl">
-                Homefolio
+                Pachtfolio
               </p>
               <p className="text-base text-[var(--muted-foreground)]">
                 {organizationName} · Signed in as {userName}

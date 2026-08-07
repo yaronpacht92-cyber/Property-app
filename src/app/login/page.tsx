@@ -19,7 +19,7 @@ export default async function LoginPage({
     <div className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 py-10">
       <div className="animate-fade-up rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm md:p-10">
         <p className="font-[family-name:var(--font-display)] text-5xl font-bold text-[var(--brand)]">
-          Homefolio
+          Pachtfolio
         </p>
         <h1 className="mt-4 text-3xl font-semibold text-[var(--foreground)]">Sign in</h1>
         <p className="mt-2 text-lg text-[var(--muted-foreground)]">
@@ -91,9 +91,9 @@ export default async function LoginPage({
 
         <div className="mt-8 rounded-2xl bg-[var(--muted)] p-4 text-base leading-relaxed">
           <p className="font-semibold">Sample development logins</p>
-          <p className="mt-1">admin@homefolio.local / ChangeMe!Homefolio1</p>
-          <p>member@homefolio.local / ChangeMe!Homefolio1</p>
-          <p>readonly@homefolio.local / ChangeMe!Homefolio1</p>
+          <p className="mt-1">admin@pachtfolio.local / ChangeMe!Pachtfolio1</p>
+          <p>member@pachtfolio.local / ChangeMe!Pachtfolio1</p>
+          <p>readonly@pachtfolio.local / ChangeMe!Pachtfolio1</p>
         </div>
       </div>
     </div>

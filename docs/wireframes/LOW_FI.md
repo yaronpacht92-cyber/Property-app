@@ -1,4 +1,4 @@
-# Low-Fidelity Wireframes — Homefolio
+# Low-Fidelity Wireframes — Pachtfolio
 
 ASCII wireframes for primary screens. Design notes: large type, high contrast, calm sage/slate palette, no dense charts, always show Back and primary actions.
 
@@ -6,7 +6,7 @@ ASCII wireframes for primary screens. Design notes: large type, high contrast, c
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Homefolio          [Home] [Properties] [Reminders] [Docs] [Settings] │
+│ Pachtfolio          [Home] [Properties] [Reminders] [Docs] [Settings] │
 ├─────────────────────────────────────────────────────────────┤
 │  Good morning, Pat                                          │
 │  ┌─────────────────────────────────────────────────────┐   │

@@ -23,7 +23,11 @@ export default async function NewPropertyPage() {
         </p>
       </div>
       <AddPropertyWizard
-        ownershipEntities={entities.map((e) => ({ id: e.id, name: e.name }))}
+        ownershipEntities={entities.map((e) => ({
+          id: e.id,
+          name: e.name,
+          entityType: e.entityType,
+        }))}
       />
     </div>
   );

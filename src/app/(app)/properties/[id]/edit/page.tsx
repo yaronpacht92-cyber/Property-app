@@ -3,10 +3,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission, assertPropertyAccess } from "@/lib/session";
 import { PERMISSIONS } from "@/lib/permissions";
 import { BackLink } from "@/components/layout/back-link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { updatePropertyBasicsAction } from "@/server/actions/properties";
+import { EditPropertyForm } from "@/components/properties/edit-property-form";
 
 export default async function EditPropertyPage({
   params,
@@ -23,53 +20,51 @@ export default async function EditPropertyPage({
   );
   if (!access) notFound();
 
-  const property = await prisma.property.findFirst({
-    where: { id, organizationId: session.user.organizationId, deletedAt: null },
-  });
+  const [property, entities] = await Promise.all([
+    prisma.property.findFirst({
+      where: { id, organizationId: session.user.organizationId, deletedAt: null },
+      include: {
+        owners: { where: { deletedAt: null }, orderBy: { createdAt: "asc" } },
+      },
+    }),
+    prisma.ownershipEntity.findMany({
+      where: { organizationId: session.user.organizationId, deletedAt: null },
+      orderBy: { name: "asc" },
+    }),
+  ]);
   if (!property) notFound();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 animate-fade-up">
+    <div className="mx-auto max-w-3xl space-y-6 animate-fade-up">
       <BackLink href={`/properties/${id}`} label="Back to Property" />
       <h1 className="text-4xl font-semibold">Edit Property</h1>
-      <form
-        action={async (formData) => {
-          "use server";
-          await updatePropertyBasicsAction(id, formData);
+      <EditPropertyForm
+        property={{
+          id: property.id,
+          nickname: property.nickname,
+          streetAddress: property.streetAddress,
+          city: property.city,
+          state: property.state,
+          zipCode: property.zipCode,
+          ownershipEntityId: property.ownershipEntityId,
+          monthlyRent: property.monthlyRent?.toString() || "",
+          leaseLengthMonths: property.leaseLengthMonths?.toString() || "",
+          leaseExpiresAt: property.leaseExpiresAt
+            ? property.leaseExpiresAt.toISOString().slice(0, 10)
+            : "",
+          owners: property.owners.map((owner) => ({
+            name: owner.name,
+            email: owner.email || "",
+            phone: owner.phone || "",
+            ownershipPercent: owner.ownershipPercent?.toString() || "",
+          })),
         }}
-        className="space-y-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6"
-      >
-        <div className="space-y-2">
-          <Label htmlFor="nickname">Property nickname</Label>
-          <Input id="nickname" name="nickname" defaultValue={property.nickname} required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="streetAddress">Street address</Label>
-          <Input
-            id="streetAddress"
-            name="streetAddress"
-            defaultValue={property.streetAddress}
-            required
-          />
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
-            <Input id="city" name="city" defaultValue={property.city} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="state">State</Label>
-            <Input id="state" name="state" defaultValue={property.state} required maxLength={2} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="zipCode">ZIP code</Label>
-            <Input id="zipCode" name="zipCode" defaultValue={property.zipCode} required />
-          </div>
-        </div>
-        <Button type="submit" size="large">
-          Save Changes
-        </Button>
-      </form>
+        ownershipEntities={entities.map((entity) => ({
+          id: entity.id,
+          name: entity.name,
+          entityType: entity.entityType,
+        }))}
+      />
     </div>
   );
 }

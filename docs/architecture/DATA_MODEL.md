@@ -1,4 +1,4 @@
-# Database Schema Proposal — Homefolio
+# Database Schema Proposal — Pachtfolio
 
 PostgreSQL + Prisma. All portfolio records are scoped by `organizationId` (tenant isolation). Primary keys are UUIDs. Soft deletes via `deletedAt` where restoration matters.
 
@@ -40,9 +40,10 @@ Organization ──< Membership >── User
 - **RolePermission** — roleId, permissionId
 
 ### Property Core
-- **Property** — organizationId, nickname, type, address fields, ownershipEntityId, dateAcquired, purchasePrice, photoDocumentId, status, timestamps, soft delete
+- **Property** — organizationId, nickname, type, address fields, ownershipEntityId, dateAcquired, purchasePrice, monthlyRent, leaseLengthMonths, leaseExpiresAt, photoDocumentId, status, timestamps, soft delete
 - **OwnershipEntity** — organizationId, name, entityType, taxIdEnc (encrypted sensitive)
 - **PropertyOwnership** — propertyId, ownershipEntityId, ownershipPercent, startDate, endDate
+- **PropertyOwner** — propertyId, name, email, phone, ownershipPercent (individual people who own)
 - **Contact** — organizationId, name, company, phone, email, notes
 - **PropertyContact** — propertyId, contactId, role (MANAGER, INSURANCE_AGENT, …), isEmergency
 

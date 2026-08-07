@@ -1,4 +1,4 @@
-# Phased Implementation Plan — Homefolio
+# Phased Implementation Plan — Pachtfolio
 
 ## Architecture Choices
 

@@ -1,4 +1,4 @@
-# Security & Permissions Plan — Homefolio
+# Security & Permissions Plan — Pachtfolio
 
 ## Threat Model (summary)
 

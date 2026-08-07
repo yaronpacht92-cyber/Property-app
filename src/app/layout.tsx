@@ -13,7 +13,7 @@ const body = Source_Sans_3({
 });
 
 export const metadata: Metadata = {
-  title: "Homefolio — Family Property Portfolio",
+  title: "Pachtfolio — Family Property Portfolio",
   description:
     "A calm, simple place for families to manage every property, document, reminder, and contact.",
 };

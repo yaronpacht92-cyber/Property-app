@@ -9,6 +9,13 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
 import { hasPermission } from "@/lib/auth";
 
+const ownerSchema = z.object({
+  name: z.string().min(1).max(120),
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().optional(),
+  ownershipPercent: z.string().optional(),
+});
+
 const basicSchema = z.object({
   nickname: z.string().min(2).max(120),
   streetAddress: z.string().min(3).max(200),
@@ -16,9 +23,15 @@ const basicSchema = z.object({
   state: z.string().min(2).max(2),
   zipCode: z.string().min(5).max(10),
   propertyType: z.enum(["RESIDENTIAL", "COMMERCIAL", "VACANT_LAND", "OTHER"]),
+  ownershipMode: z.enum(["existing", "new", "none"]).optional(),
   ownershipEntityId: z.string().uuid().optional().or(z.literal("")),
+  newEntityName: z.string().optional(),
+  newEntityType: z.string().optional(),
   dateAcquired: z.string().optional(),
   purchasePrice: z.string().optional(),
+  monthlyRent: z.string().optional(),
+  leaseLengthMonths: z.string().optional(),
+  leaseExpiresAt: z.string().optional(),
   estimatedValue: z.string().optional(),
   assessedValue: z.string().optional(),
   annualTaxes: z.string().optional(),
@@ -30,12 +43,85 @@ const basicSchema = z.object({
   insuranceCarrier: z.string().optional(),
   insurancePolicyNumber: z.string().optional(),
   insuranceRenewalDate: z.string().optional(),
+  ownersJson: z.string().optional(),
 });
 
 function money(value?: string) {
   if (!value) return null;
   const n = Number(value.replace(/[$,]/g, ""));
   return Number.isFinite(n) ? n : null;
+}
+
+function months(value?: string) {
+  if (!value) return null;
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function parseOwners(raw?: string) {
+  if (!raw) return [] as z.infer<typeof ownerSchema>[];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => ownerSchema.safeParse(item))
+      .filter((result) => result.success)
+      .map((result) => result.data);
+  } catch {
+    return [];
+  }
+}
+
+async function resolveOwnershipEntityId(input: {
+  organizationId: string;
+  ownershipMode?: string;
+  ownershipEntityId?: string;
+  newEntityName?: string;
+  newEntityType?: string;
+}) {
+  if (input.ownershipMode === "none") return null;
+
+  if (input.ownershipMode === "new" && input.newEntityName?.trim()) {
+    const entity = await prisma.ownershipEntity.create({
+      data: {
+        organizationId: input.organizationId,
+        name: input.newEntityName.trim(),
+        entityType: input.newEntityType?.trim() || null,
+      },
+    });
+    return entity.id;
+  }
+
+  if (input.ownershipEntityId) {
+    const entity = await prisma.ownershipEntity.findFirst({
+      where: {
+        id: input.ownershipEntityId,
+        organizationId: input.organizationId,
+        deletedAt: null,
+      },
+    });
+    return entity?.id ?? null;
+  }
+
+  return null;
+}
+
+async function replaceOwners(
+  propertyId: string,
+  owners: z.infer<typeof ownerSchema>[],
+) {
+  await prisma.propertyOwner.deleteMany({ where: { propertyId } });
+  if (!owners.length) return;
+
+  await prisma.propertyOwner.createMany({
+    data: owners.map((owner) => ({
+      propertyId,
+      name: owner.name.trim(),
+      email: owner.email || null,
+      phone: owner.phone || null,
+      ownershipPercent: money(owner.ownershipPercent),
+    })),
+  });
 }
 
 export async function createPropertyAction(formData: FormData) {
@@ -47,6 +133,14 @@ export async function createPropertyAction(formData: FormData) {
   }
 
   const data = parsed.data;
+  const ownershipEntityId = await resolveOwnershipEntityId({
+    organizationId: session.user.organizationId,
+    ownershipMode: data.ownershipMode,
+    ownershipEntityId: data.ownershipEntityId,
+    newEntityName: data.newEntityName,
+    newEntityType: data.newEntityType,
+  });
+
   const property = await prisma.property.create({
     data: {
       organizationId: session.user.organizationId,
@@ -56,13 +150,48 @@ export async function createPropertyAction(formData: FormData) {
       state: data.state.toUpperCase(),
       zipCode: data.zipCode,
       propertyType: data.propertyType,
-      ownershipEntityId: data.ownershipEntityId || null,
+      ownershipEntityId,
       dateAcquired: data.dateAcquired ? new Date(data.dateAcquired) : null,
       purchasePrice: money(data.purchasePrice),
+      monthlyRent: money(data.monthlyRent),
+      leaseLengthMonths: months(data.leaseLengthMonths),
+      leaseExpiresAt: data.leaseExpiresAt ? new Date(data.leaseExpiresAt) : null,
       createdById: session.user.id,
       updatedById: session.user.id,
     },
   });
+
+  if (ownershipEntityId) {
+    await prisma.propertyOwnership.create({
+      data: {
+        propertyId: property.id,
+        ownershipEntityId,
+        ownershipPercent: 100,
+        startDate: data.dateAcquired ? new Date(data.dateAcquired) : new Date(),
+      },
+    });
+  }
+
+  await replaceOwners(property.id, parseOwners(data.ownersJson));
+
+  if (data.leaseExpiresAt) {
+    const due = new Date(data.leaseExpiresAt);
+    if (due > new Date()) {
+      await prisma.reminder.create({
+        data: {
+          organizationId: session.user.organizationId,
+          propertyId: property.id,
+          type: "LEASE_EXPIRATION",
+          title: `Lease expires — ${property.nickname}`,
+          description: "Review or renew the lease before it ends.",
+          dueDate: due,
+          status:
+            due.getTime() - Date.now() < 1000 * 60 * 60 * 24 * 30 ? "DUE_SOON" : "UPCOMING",
+          assignedToId: session.user.id,
+        },
+      });
+    }
+  }
 
   if (data.estimatedValue) {
     await prisma.propertyValuation.create({
@@ -114,7 +243,7 @@ export async function createPropertyAction(formData: FormData) {
 
   if (data.insuranceCarrier || data.insurancePolicyNumber) {
     const renewal = data.insuranceRenewalDate ? new Date(data.insuranceRenewalDate) : null;
-    const policy = await prisma.insurancePolicy.create({
+    await prisma.insurancePolicy.create({
       data: {
         propertyId: property.id,
         carrier: data.insuranceCarrier || null,
@@ -149,7 +278,6 @@ export async function createPropertyAction(formData: FormData) {
           },
         });
       }
-      void policy;
     }
   }
 
@@ -217,10 +345,26 @@ export async function updatePropertyBasicsAction(propertyId: string, formData: F
   const city = String(formData.get("city") ?? "").trim();
   const state = String(formData.get("state") ?? "").trim().toUpperCase();
   const zipCode = String(formData.get("zipCode") ?? "").trim();
+  const ownershipMode = String(formData.get("ownershipMode") ?? "existing");
+  const ownershipEntityIdRaw = String(formData.get("ownershipEntityId") ?? "");
+  const newEntityName = String(formData.get("newEntityName") ?? "");
+  const newEntityType = String(formData.get("newEntityType") ?? "");
+  const monthlyRent = money(String(formData.get("monthlyRent") ?? ""));
+  const leaseLengthMonths = months(String(formData.get("leaseLengthMonths") ?? ""));
+  const leaseExpiresAtRaw = String(formData.get("leaseExpiresAt") ?? "");
+  const ownersJson = String(formData.get("ownersJson") ?? "[]");
 
   if (!nickname || !streetAddress || !city || !state || !zipCode) {
     return { error: "Please fill in the required address fields." };
   }
+
+  const ownershipEntityId = await resolveOwnershipEntityId({
+    organizationId: session.user.organizationId,
+    ownershipMode,
+    ownershipEntityId: ownershipEntityIdRaw,
+    newEntityName,
+    newEntityType,
+  });
 
   await prisma.property.update({
     where: { id: propertyId },
@@ -230,9 +374,15 @@ export async function updatePropertyBasicsAction(propertyId: string, formData: F
       city,
       state,
       zipCode,
+      ownershipEntityId,
+      monthlyRent,
+      leaseLengthMonths,
+      leaseExpiresAt: leaseExpiresAtRaw ? new Date(leaseExpiresAtRaw) : null,
       updatedById: session.user.id,
     },
   });
+
+  await replaceOwners(propertyId, parseOwners(ownersJson));
 
   await writeAuditLog({
     organizationId: session.user.organizationId,

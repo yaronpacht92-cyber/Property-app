@@ -9,13 +9,13 @@
 ### Manual dump
 
 ```bash
-pg_dump "$DATABASE_URL" --format=custom --file=homefolio-$(date +%F).dump
+pg_dump "$DATABASE_URL" --format=custom --file=pachtfolio-$(date +%F).dump
 ```
 
 ### Restore
 
 ```bash
-pg_restore --clean --if-exists --dbname="$DATABASE_URL" homefolio-YYYY-MM-DD.dump
+pg_restore --clean --if-exists --dbname="$DATABASE_URL" pachtfolio-YYYY-MM-DD.dump
 ```
 
 ## Document storage

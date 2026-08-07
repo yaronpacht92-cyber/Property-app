@@ -1,6 +1,6 @@
 # Data-Provider Configuration Guide
 
-Homefolio never scrapes consumer real-estate websites. Property valuation and tax data must come from:
+Pachtfolio never scrapes consumer real-estate websites. Property valuation and tax data must come from:
 
 1. Manual entry / override by the family, or
 2. A properly licensed provider adapter.

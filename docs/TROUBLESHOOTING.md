@@ -14,7 +14,7 @@
 
 ## Document download fails
 
-- Signed links expire quickly by design — open the document again from Homefolio.
+- Signed links expire quickly by design — open the document again from Pachtfolio.
 - Seeded sample documents may not have binary files on disk; upload a new file to test downloads.
 - Infected scan status blocks download.
 

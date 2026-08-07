@@ -1,8 +1,8 @@
-# Homefolio — Family Property Portfolio
+# Pachtfolio — Family Property Portfolio
 
 A calm, accessible web application for families who own and manage real estate. Built for older adults first: large text, plain English, obvious actions, and no clutter.
 
-Homefolio replaces scattered paper files and disconnected tools with one property-by-property home for contacts, finances, insurance, maintenance, documents, reminders, and notes.
+Pachtfolio replaces scattered paper files and disconnected tools with one property-by-property home for contacts, finances, insurance, maintenance, documents, reminders, and notes.
 
 ## Product docs (start here)
 
@@ -85,9 +85,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Role | Email | Password |
 |------|-------|----------|
-| Family Administrator | `admin@homefolio.local` | `ChangeMe!Homefolio1` |
-| Family Member | `member@homefolio.local` | `ChangeMe!Homefolio1` |
-| Read-Only User | `readonly@homefolio.local` | `ChangeMe!Homefolio1` |
+| Family Administrator | `admin@pachtfolio.local` | `ChangeMe!Pachtfolio1` |
+| Family Member | `member@pachtfolio.local` | `ChangeMe!Pachtfolio1` |
+| Read-Only User | `readonly@pachtfolio.local` | `ChangeMe!Pachtfolio1` |
 
 All seeded properties and related records are labeled **Sample data**.
 

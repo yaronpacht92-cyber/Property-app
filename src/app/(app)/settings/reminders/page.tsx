@@ -19,7 +19,7 @@ export default async function ReminderDefaultsPage() {
       <BackLink href="/settings" label="Back to Settings" />
       <h1 className="text-4xl font-semibold">Reminder defaults</h1>
       <Alert tone="info" title="Insurance renewal reminders">
-        Homefolio creates reminders before policy renewal dates using these defaults.
+        Pachtfolio creates reminders before policy renewal dates using these defaults.
       </Alert>
       <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6">
         <p className="text-xl font-semibold">Default schedule</p>

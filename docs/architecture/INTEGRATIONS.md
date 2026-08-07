@@ -19,7 +19,7 @@ Mock adapters are used when credentials are missing. The UI labels sample/not-co
 3. Configure `QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_CLIENT_SECRET`, `QUICKBOOKS_REDIRECT_URI`, `QUICKBOOKS_ENVIRONMENT`.
 4. Admin connects from Settings → Integrations.
 5. Map each property to Class / Customer / Project / Location / Account / Custom field.
-6. Sync is idempotent and read-only; Homefolio does not change QuickBooks records in v1.
+6. Sync is idempotent and read-only; Pachtfolio does not change QuickBooks records in v1.
 
 ## Gmail (Phase 4)
 
@@ -27,7 +27,7 @@ Mock adapters are used when credentials are missing. The UI labels sample/not-co
 2. Scopes: read-only Gmail metadata/body as approved by the family.
 3. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
 4. Matching uses property address, nickname, parcel, manager email, keywords.
-5. Users may manually assign threads. Homefolio does not send mail in v1.
+5. Users may manually assign threads. Pachtfolio does not send mail in v1.
 
 ## Microsoft Outlook (Phase 4)
 
