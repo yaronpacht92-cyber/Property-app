@@ -206,10 +206,12 @@ export default async function PropertyDetailPage({
               <Link href={`/properties/${property.id}?tab=notes`}>Add Note</Link>
             </Button>
           ) : null}
-          {canDelete ? (
-            <ArchivePropertyButton propertyId={property.id} nickname={property.nickname} />
-          ) : null}
         </div>
+        {canDelete ? (
+          <div className="mt-3">
+            <ArchivePropertyButton propertyId={property.id} nickname={property.nickname} />
+          </div>
+        ) : null}
       </section>
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Property sections">
