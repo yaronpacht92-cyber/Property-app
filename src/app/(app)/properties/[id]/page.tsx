@@ -216,6 +216,9 @@ export default async function PropertyDetailPage({
               <Link href={`/properties/${property.id}?tab=notes`}>Add Note</Link>
             </Button>
           ) : null}
+          {canDelete ? (
+            <ArchivePropertyButton propertyId={property.id} nickname={property.nickname} />
+          ) : null}
         </div>
       </section>
 
@@ -534,11 +537,6 @@ export default async function PropertyDetailPage({
               <p className="mt-2 text-lg whitespace-pre-wrap">{note.body}</p>
             </article>
           ))}
-          {canDelete ? (
-            <div className="pt-6">
-              <ArchivePropertyButton propertyId={property.id} nickname={property.nickname} />
-            </div>
-          ) : null}
         </section>
       ) : null}
     </div>

@@ -23,12 +23,11 @@ export function ArchivePropertyButton({
   }
 
   return (
-    <div className="rounded-2xl border-2 border-[var(--danger)] bg-[var(--danger-soft)] p-5">
-      <p className="text-xl font-semibold">
-        Are you sure you want to remove {nickname}?
-      </p>
+    <div className="w-full basis-full rounded-2xl border-2 border-[var(--danger)] bg-[var(--danger-soft)] p-5">
+      <p className="text-xl font-semibold">Are you sure you want to remove {nickname}?</p>
       <p className="mt-2 text-lg">
-        Its information will be archived and can be restored by an administrator.
+        This archives the property so it leaves your active list. An administrator can restore it
+        later if needed.
       </p>
       <div className="mt-4 flex flex-wrap gap-3">
         <Button type="button" variant="outline" onClick={() => setConfirming(false)} disabled={pending}>
