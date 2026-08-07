@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
 import { auth, signIn } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,9 @@ export default async function LoginPage({
 
         {params.error ? (
           <Alert className="mt-6" tone="danger" title="We could not sign you in">
-            Please check your email and password. If you use a security code, enter it below.
+            Please check your email and password. Use the sample logins below exactly as shown,
+            including the capital letters in the password. If you use a security code, enter it
+            below.
           </Alert>
         ) : null}
 
@@ -36,19 +39,25 @@ export default async function LoginPage({
           className="mt-8 space-y-5"
           action={async (formData) => {
             "use server";
+            const callbackUrl = String(formData.get("callbackUrl") || "/home");
             try {
               await signIn("credentials", {
-                email: String(formData.get("email") ?? ""),
+                email: String(formData.get("email") ?? "").trim().toLowerCase(),
                 password: String(formData.get("password") ?? ""),
-                mfaCode: String(formData.get("mfaCode") ?? ""),
-                redirectTo: params.callbackUrl || "/home",
+                mfaCode: String(formData.get("mfaCode") ?? "").trim() || undefined,
+                redirectTo: callbackUrl.startsWith("/") ? callbackUrl : "/home",
               });
             } catch (error) {
-              // Auth.js throws on redirect; rethrow redirect errors.
+              // Successful Auth.js sign-in throws a redirect — rethrow it.
+              // Failed credentials should return to the login form, not a 500 page.
+              if (error instanceof AuthError) {
+                redirect(`/login?error=${encodeURIComponent(error.type)}&callbackUrl=${encodeURIComponent(callbackUrl)}`);
+              }
               throw error;
             }
           }}
         >
+          <input type="hidden" name="callbackUrl" value={params.callbackUrl || "/home"} />
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -57,6 +66,7 @@ export default async function LoginPage({
               type="email"
               autoComplete="username"
               required
+              defaultValue="admin@pachtfolio.local"
               placeholder="you@example.com"
             />
           </div>
@@ -68,6 +78,7 @@ export default async function LoginPage({
               type="password"
               autoComplete="current-password"
               required
+              defaultValue="ChangeMe!Pachtfolio1"
               placeholder="Your password"
             />
           </div>
@@ -94,6 +105,9 @@ export default async function LoginPage({
           <p className="mt-1">admin@pachtfolio.local / ChangeMe!Pachtfolio1</p>
           <p>member@pachtfolio.local / ChangeMe!Pachtfolio1</p>
           <p>readonly@pachtfolio.local / ChangeMe!Pachtfolio1</p>
+          <p className="mt-2 text-[var(--muted-foreground)]">
+            The admin fields above are prefilled for this demo. Click Sign in to continue.
+          </p>
         </div>
       </div>
     </div>
