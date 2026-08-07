@@ -12,8 +12,6 @@ import { formatCurrency, formatDate, propertyTypeLabel } from "@/lib/utils";
 import { PropertyNotesForm } from "@/components/properties/notes-form";
 import { ValuationOverrideForm } from "@/components/properties/valuation-override-form";
 import { ArchivePropertyButton } from "@/components/properties/archive-property-button";
-import { RefreshPropertyDataButton } from "@/components/properties/refresh-property-data-button";
-import { PhotoProposalPanel } from "@/components/properties/photo-proposal-panel";
 import { getFileStorage } from "@/adapters/storage";
 
 const TABS = [
@@ -80,13 +78,6 @@ export default async function PropertyDetailPage({
       emailThreads: { orderBy: { receivedAt: "desc" }, take: 10 },
       accountingMappings: true,
       financialTransactions: { orderBy: { txnDate: "desc" }, take: 8 },
-      saleHistory: { orderBy: { saleDate: "desc" }, take: 8 },
-      photoProposals: {
-        where: { status: "PENDING" },
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-      dataRefreshLogs: { orderBy: { startedAt: "desc" }, take: 3 },
     },
   });
 
@@ -109,10 +100,6 @@ export default async function PropertyDetailPage({
     : null;
   const currentPhotoUrl = currentPhoto
     ? (await storage.getSignedDownloadUrl(currentPhoto.storageKey, 600)).url
-    : null;
-  const pendingProposal = property.photoProposals[0];
-  const proposedPhotoUrl = pendingProposal
-    ? (await storage.getSignedDownloadUrl(pendingProposal.proposedStorageKey, 600)).url
     : null;
   const canMaintain = hasPermission(session.user.permissions, PERMISSIONS.MAINTENANCE_WRITE);
   const canDocs = hasPermission(session.user.permissions, PERMISSIONS.DOCUMENTS_WRITE);
@@ -165,12 +152,6 @@ export default async function PropertyDetailPage({
               · Expires {formatDate(property.leaseExpiresAt)} · Manager:{" "}
               {manager?.name || "Not assigned"} · Last updated {formatDate(property.updatedAt)}
             </p>
-            <p className="mt-1 text-base text-[var(--muted-foreground)]">
-              Last data refresh: {formatDate(property.lastDataRefreshAt)}
-              {property.lastDataRefreshSource ? ` · ${property.lastDataRefreshSource}` : ""}
-              {" · "}
-              Last photo update: {formatDate(property.lastPhotoRefreshAt)}
-            </p>
             {property.reminders[0] ? (
               <p className="mt-3">
                 <Badge tone={property.reminders[0].status === "OVERDUE" ? "danger" : "warning"}>
@@ -198,32 +179,10 @@ export default async function PropertyDetailPage({
               </div>
             )}
             <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-              {property.photoSource
-                ? `Photo source: ${property.photoSource}`
-                : "No public photo source on file"}
+              Upload a photo from Documents when you have one.
             </p>
           </div>
         </div>
-
-        {canEdit ? (
-          <div className="mt-6">
-            <RefreshPropertyDataButton propertyId={property.id} />
-          </div>
-        ) : null}
-
-        {pendingProposal && proposedPhotoUrl ? (
-          <div className="mt-6">
-            <PhotoProposalPanel
-              proposal={{
-                id: pendingProposal.id,
-                proposedSource: pendingProposal.proposedSource,
-                proposedRetrievedAt: pendingProposal.proposedRetrievedAt.toISOString(),
-                proposedImageUrl: proposedPhotoUrl,
-              }}
-              currentImageUrl={currentPhotoUrl}
-            />
-          </div>
-        ) : null}
 
         <div className="mt-6 flex flex-wrap gap-3">
           {canEdit ? (
@@ -335,7 +294,6 @@ export default async function PropertyDetailPage({
                   "Missing information"}
               </li>
               <li>Mortgage status: {property.mortgages[0]?.status || "Not set"}</li>
-              <li>Last photo update: {formatDate(property.lastPhotoRefreshAt)}</li>
             </ul>
           </InfoPanel>
           <InfoPanel title="Upcoming deadlines">
@@ -365,20 +323,6 @@ export default async function PropertyDetailPage({
               </p>
             ))}
           </InfoPanel>
-          <InfoPanel title="Public sale history">
-            {property.saleHistory.length === 0 ? (
-              <p className="text-lg">No public sale history on file yet.</p>
-            ) : (
-              <ul className="space-y-2 text-lg">
-                {property.saleHistory.map((sale) => (
-                  <li key={sale.id}>
-                    {formatDate(sale.saleDate)} · {formatCurrency(sale.salePrice?.toString())}
-                    {sale.buyerSeller ? ` · ${sale.buyerSeller}` : ""}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </InfoPanel>
         </section>
       ) : null}
 
@@ -401,14 +345,11 @@ export default async function PropertyDetailPage({
               Current estimate: {formatCurrency(valuation?.estimatedValue?.toString())}
             </p>
             <p className="text-base text-[var(--muted-foreground)]">
-              Source: {valuation?.source || "Not set"} · Updated{" "}
-              {formatDate(valuation?.sourceUpdatedAt || valuation?.createdAt)} ·{" "}
-              {valuation?.isEstimated ? "Estimated" : "Exact"} ·{" "}
-              {valuation?.isManualOverride ? "Manual override (kept on refresh)" : "From source"}
-            </p>
-            <p className="mt-2 text-base text-[var(--muted-foreground)]">
-              Last portfolio data refresh: {formatDate(property.lastDataRefreshAt)}
-              {property.lastDataRefreshSource ? ` · ${property.lastDataRefreshSource}` : ""}
+              Entered manually
+              {valuation
+                ? ` · Updated ${formatDate(valuation.sourceUpdatedAt || valuation.createdAt)}`
+                : ""}
+              {valuation?.isEstimated ? " · Estimated (not a guaranteed appraisal)" : ""}
             </p>
             {canEdit ? <ValuationOverrideForm propertyId={property.id} /> : null}
           </InfoPanel>
@@ -418,9 +359,7 @@ export default async function PropertyDetailPage({
               <li>Annual tax: {formatCurrency(tax?.annualTax?.toString())}</li>
               <li>Authority: {tax?.authority || "Not set"}</li>
               <li>Parcel number: {tax?.parcelNumber || "Not set"}</li>
-              <li>
-                Source: {tax?.source || "manual"} · Updated {formatDate(tax?.sourceUpdatedAt)}
-              </li>
+              <li>Entered manually · Updated {formatDate(tax?.sourceUpdatedAt || tax?.createdAt)}</li>
             </ul>
           </InfoPanel>
           <InfoPanel title="QuickBooks summary (read-only)">

@@ -78,6 +78,6 @@ Read-only users may be limited to assigned properties via `PropertyAssignment` (
 
 ## Data Provider Policy
 
-- No scraping of Zillow or similar
-- Property data only via licensed provider adapters or manual entry/override
+- No scraping of consumer real-estate websites
+- Property valuation, tax, and physical details are manual entry only
 - Always show source, last updated, and estimated vs exact

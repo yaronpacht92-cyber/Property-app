@@ -13,6 +13,6 @@
 
 ## Open Questions (non-blocking)
 
-- Preferred licensed property-data vendor (ATTOM, CoreLogic, etc.)
+- Property valuation/tax/details remain manual entry (no third-party property data feeds)
 - Whether Read-Only users should see financial detail or summaries only (currently: summaries allowed)
 - MFA enforcement policy for administrators (optional vs required at pilot)

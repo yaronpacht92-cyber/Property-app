@@ -28,6 +28,11 @@ type Props = {
     monthlyRent: string;
     leaseLengthMonths: string;
     leaseExpiresAt: string;
+    bedrooms: string;
+    bathrooms: string;
+    squareFootage: string;
+    lotSizeSqFt: string;
+    yearBuilt: string;
     owners: OwnerDraft[];
   };
   ownershipEntities: { id: string; name: string; entityType: string | null }[];
@@ -266,6 +271,59 @@ export function EditPropertyForm({ property, ownershipEntities }: Props) {
           />
         </div>
       </div>
+
+      <fieldset>
+        <legend className="mb-2 text-lg font-semibold">Property details (manual entry)</legend>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="bedrooms">Bedrooms</Label>
+            <Input
+              id="bedrooms"
+              name="bedrooms"
+              defaultValue={property.bedrooms}
+              inputMode="numeric"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="bathrooms">Bathrooms</Label>
+            <Input
+              id="bathrooms"
+              name="bathrooms"
+              defaultValue={property.bathrooms}
+              inputMode="decimal"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="yearBuilt">Year built</Label>
+            <Input
+              id="yearBuilt"
+              name="yearBuilt"
+              defaultValue={property.yearBuilt}
+              inputMode="numeric"
+            />
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="squareFootage">Living area (sq ft)</Label>
+            <Input
+              id="squareFootage"
+              name="squareFootage"
+              defaultValue={property.squareFootage}
+              inputMode="numeric"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lotSizeSqFt">Lot size (sq ft)</Label>
+            <Input
+              id="lotSizeSqFt"
+              name="lotSizeSqFt"
+              defaultValue={property.lotSizeSqFt}
+              inputMode="numeric"
+            />
+          </div>
+        </div>
+      </fieldset>
 
       {error ? <p className="text-lg text-[var(--danger)]">{error}</p> : null}
       <Button type="submit" size="large" disabled={pending}>

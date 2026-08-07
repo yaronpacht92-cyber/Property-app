@@ -59,7 +59,7 @@ Prominent **Add Property** on Home and Properties.
 
 ## 7. Later Phases (not blocking Phase 1)
 
-- Phase 2: Licensed property valuation & tax data providers (adapter layer)
+- Phase 2: Richer manual financial/detail entry and reporting
 - Phase 3: QuickBooks Online read-only OAuth sync
 - Phase 4: Gmail / Microsoft Graph email matching
 - Phase 5: Email reminders, hardening, accessibility & security validation
@@ -87,7 +87,7 @@ Prominent **Add Property** on Home and Properties.
 
 1. One organization (family) per pilot; multi-org is supported in the data model.
 2. Auth.js credentials + optional TOTP MFA for Phase 1; SSO can be added later.
-3. Local/dev uses mock adapters for S3, property data, QuickBooks, and email until secrets are configured.
+3. Local/dev uses mock adapters for S3, QuickBooks, and email until secrets are configured. Property details are always manual.
 4. PostgreSQL is the system of record; soft deletes archive important records.
 5. Desktop and tablet are primary devices; phone remains usable.
 6. Sample seed data is clearly labeled “Sample data”.

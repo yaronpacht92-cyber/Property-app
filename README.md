@@ -103,23 +103,20 @@ npm run test:e2e     # Playwright (app must be running)
 npm run db:migrate   # create/apply migrations
 npm run db:seed      # load sample portfolio
 npm run db:deploy    # apply migrations in staging/production
-npm run jobs:weekly-refresh  # run authorized weekly property data refresh once
 ```
-
-Weekly refresh is also available at `/api/cron/weekly-property-refresh` (secured with `CRON_SECRET`) and scheduled in `vercel.json`. See `docs/architecture/PROPERTY_DATA_REFRESH.md`.
 
 ## Real vs mock integrations
 
 | Feature | Development default | Production path |
 |---------|---------------------|-----------------|
-| Property valuation/tax | Public county GIS when covered (e.g. Montgomery County, AL); else mock | Same + optional licensed API adapter |
-| QuickBooks | Not configured / sample txn refs | OAuth 2.0 read-only sync |
-| Gmail / Microsoft | Not configured / sample threads | OAuth matching |
+| Property valuation/tax/details | Manual entry only | Manual entry only |
+| QuickBooks | Not configured / sample txn refs | OAuth 2.0 read-only sync (not wired yet) |
+| Gmail / Microsoft | Not configured / sample threads | OAuth matching (not wired yet) |
 | File storage | Local disk under `storage/uploads` | Private S3-compatible bucket + signed URLs |
 | Malware scan | Local job marks SKIPPED/CLEAN | AV scanner workflow |
 | Notifications | Mock adapter | Email provider |
 
-The core app never depends on live integrations. Manual entry and overrides always work.
+Property details are entered by hand. The core app never depends on live QuickBooks or email connections.
 
 ## Security highlights
 

@@ -15,7 +15,6 @@ Coverage today:
 - Role permission matrix
 - Encryption helpers
 - Login rate limiting
-- Mock property-data adapter attribution
 - Organization tenant isolation queries
 
 ## End-to-end

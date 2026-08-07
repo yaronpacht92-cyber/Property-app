@@ -52,6 +52,11 @@ export default async function EditPropertyPage({
           leaseExpiresAt: property.leaseExpiresAt
             ? property.leaseExpiresAt.toISOString().slice(0, 10)
             : "",
+          bedrooms: property.bedrooms?.toString() || "",
+          bathrooms: property.bathrooms?.toString() || "",
+          squareFootage: property.squareFootage?.toString() || "",
+          lotSizeSqFt: property.lotSizeSqFt?.toString() || "",
+          yearBuilt: property.yearBuilt?.toString() || "",
           owners: property.owners.map((owner) => ({
             name: owner.name,
             email: owner.email || "",

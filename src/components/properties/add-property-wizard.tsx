@@ -68,6 +68,11 @@ export function AddPropertyWizard({ ownershipEntities }: Props) {
     assessedValue: "",
     annualTaxes: "",
     taxJurisdiction: "",
+    bedrooms: "",
+    bathrooms: "",
+    squareFootage: "",
+    lotSizeSqFt: "",
+    yearBuilt: "",
     insuranceCarrier: "",
     insurancePolicyNumber: "",
     insuranceRenewalDate: "",
@@ -434,6 +439,45 @@ export function AddPropertyWizard({ ownershipEntities }: Props) {
                 onChange={(e) => update("taxJurisdiction", e.target.value)}
               />
             </Field>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Field label="Bedrooms">
+                <Input
+                  value={form.bedrooms}
+                  onChange={(e) => update("bedrooms", e.target.value)}
+                  inputMode="numeric"
+                />
+              </Field>
+              <Field label="Bathrooms">
+                <Input
+                  value={form.bathrooms}
+                  onChange={(e) => update("bathrooms", e.target.value)}
+                  inputMode="decimal"
+                />
+              </Field>
+              <Field label="Year built">
+                <Input
+                  value={form.yearBuilt}
+                  onChange={(e) => update("yearBuilt", e.target.value)}
+                  inputMode="numeric"
+                />
+              </Field>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Living area (sq ft)">
+                <Input
+                  value={form.squareFootage}
+                  onChange={(e) => update("squareFootage", e.target.value)}
+                  inputMode="numeric"
+                />
+              </Field>
+              <Field label="Lot size (sq ft)">
+                <Input
+                  value={form.lotSizeSqFt}
+                  onChange={(e) => update("lotSizeSqFt", e.target.value)}
+                  inputMode="numeric"
+                />
+              </Field>
+            </div>
           </>
         ) : null}
 

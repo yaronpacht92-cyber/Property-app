@@ -27,11 +27,10 @@
 - Tests for authz + tenant isolation + core flows
 - Documentation
 
-## Phase 2 — External Property Data
+## Phase 2 — Manual portfolio depth
 
-- ValuationProvider + TaxProvider adapters
-- Manual override + refresh history UI
-- Source attribution on all external fields
+- Manual valuation, tax, and property detail entry
+- Manual override of estimated values
 
 ## Phase 3 — QuickBooks (read-only)
 
@@ -53,7 +52,7 @@
 
 | Integration | Dependency | Limitation |
 |-------------|------------|------------|
-| Property data | Licensed API key | Never scrape; manual entry always available |
+| Property data | None | Manual entry only; no scraping or third-party feeds |
 | QuickBooks | Intuit OAuth app | v1 read-only; mapping varies by household |
 | Gmail | Google Cloud OAuth | Import references only, not full mailbox dump |
 | Microsoft | Azure app registration | Same as Gmail |

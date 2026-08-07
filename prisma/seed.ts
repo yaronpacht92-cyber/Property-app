@@ -18,9 +18,6 @@ async function main() {
   await prisma.emailThreadReference.deleteMany();
   await prisma.emailConnection.deleteMany();
   await prisma.integrationSyncLog.deleteMany();
-  await prisma.propertyDataRefreshLog.deleteMany();
-  await prisma.propertyPhotoProposal.deleteMany();
-  await prisma.propertySaleHistory.deleteMany();
   await prisma.note.deleteMany();
   await prisma.reminder.deleteMany();
   await prisma.maintenanceRecord.deleteMany();

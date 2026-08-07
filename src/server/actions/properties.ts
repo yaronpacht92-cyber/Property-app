@@ -36,6 +36,11 @@ const basicSchema = z.object({
   assessedValue: z.string().optional(),
   annualTaxes: z.string().optional(),
   taxJurisdiction: z.string().optional(),
+  bedrooms: z.string().optional(),
+  bathrooms: z.string().optional(),
+  squareFootage: z.string().optional(),
+  lotSizeSqFt: z.string().optional(),
+  yearBuilt: z.string().optional(),
   managerName: z.string().optional(),
   managerCompany: z.string().optional(),
   managerPhone: z.string().optional(),
@@ -56,6 +61,18 @@ function months(value?: string) {
   if (!value) return null;
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function intOrNull(value?: string) {
+  if (!value?.trim()) return null;
+  const n = Number.parseInt(value.replace(/,/g, ""), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function decimalOrNull(value?: string) {
+  if (!value?.trim()) return null;
+  const n = Number(value.replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
 }
 
 function parseOwners(raw?: string) {
@@ -156,6 +173,11 @@ export async function createPropertyAction(formData: FormData) {
       monthlyRent: money(data.monthlyRent),
       leaseLengthMonths: months(data.leaseLengthMonths),
       leaseExpiresAt: data.leaseExpiresAt ? new Date(data.leaseExpiresAt) : null,
+      bedrooms: intOrNull(data.bedrooms),
+      bathrooms: decimalOrNull(data.bathrooms),
+      squareFootage: intOrNull(data.squareFootage),
+      lotSizeSqFt: intOrNull(data.lotSizeSqFt),
+      yearBuilt: intOrNull(data.yearBuilt),
       createdById: session.user.id,
       updatedById: session.user.id,
     },
@@ -352,6 +374,11 @@ export async function updatePropertyBasicsAction(propertyId: string, formData: F
   const monthlyRent = money(String(formData.get("monthlyRent") ?? ""));
   const leaseLengthMonths = months(String(formData.get("leaseLengthMonths") ?? ""));
   const leaseExpiresAtRaw = String(formData.get("leaseExpiresAt") ?? "");
+  const bedrooms = intOrNull(String(formData.get("bedrooms") ?? ""));
+  const bathrooms = decimalOrNull(String(formData.get("bathrooms") ?? ""));
+  const squareFootage = intOrNull(String(formData.get("squareFootage") ?? ""));
+  const lotSizeSqFt = intOrNull(String(formData.get("lotSizeSqFt") ?? ""));
+  const yearBuilt = intOrNull(String(formData.get("yearBuilt") ?? ""));
   const ownersJson = String(formData.get("ownersJson") ?? "[]");
 
   if (!nickname || !streetAddress || !city || !state || !zipCode) {
@@ -378,6 +405,11 @@ export async function updatePropertyBasicsAction(propertyId: string, formData: F
       monthlyRent,
       leaseLengthMonths,
       leaseExpiresAt: leaseExpiresAtRaw ? new Date(leaseExpiresAtRaw) : null,
+      bedrooms,
+      bathrooms,
+      squareFootage,
+      lotSizeSqFt,
+      yearBuilt,
       updatedById: session.user.id,
     },
   });
@@ -418,7 +450,7 @@ export async function overrideValuationAction(propertyId: string, formData: Form
     data: {
       propertyId,
       estimatedValue: value,
-      source: "Manual override",
+      source: "Manual entry",
       sourceUpdatedAt: new Date(),
       isEstimated: true,
       isManualOverride: true,

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { getAccountingAdapter } from "@/adapters/accounting";
 import { getEmailAdapter } from "@/adapters/email";
-import { getPropertyDataProvider } from "@/adapters/property-data";
 import { formatDate } from "@/lib/utils";
 
 export default async function IntegrationsPage() {
@@ -27,17 +26,14 @@ export default async function IntegrationsPage() {
 
   const qb = getAccountingAdapter();
   const mail = getEmailAdapter();
-  const propertyData = getPropertyDataProvider();
-  const propertyDataStatus = await propertyData.getConnectionStatus();
-  const propertyDataMode = (process.env.PROPERTY_DATA_PROVIDER || "auto").toLowerCase();
 
   return (
     <div className="space-y-6 animate-fade-up">
       <BackLink href="/settings" label="Back to Settings" />
       <h1 className="text-4xl font-semibold">Integrations</h1>
       <Alert tone="info" title="Core Pachtfolio works without connections">
-        You can enter property information by hand at any time. Live QuickBooks and email
-        connections use secure OAuth and are read-only in the first release.
+        Property values, taxes, and details are entered by hand. Live QuickBooks and email
+        connections are not wired yet; sample stubs may appear until OAuth apps are built.
       </Alert>
 
       <IntegrationCard
@@ -51,9 +47,9 @@ export default async function IntegrationsPage() {
         detail={`Adapter: ${mail.name}. Property matching uses addresses, nicknames, and keywords. Sending email from Pachtfolio is not enabled in version 1.`}
       />
       <IntegrationCard
-        title="Property data provider"
-        status={propertyDataStatus === "ready" ? "CONNECTED" : "NOT_CONFIGURED"}
-        detail={`Adapter: ${propertyData.name} (mode: ${propertyDataMode}). Uses public county GIS parcels when the address is covered (starting with Montgomery County, AL), otherwise sample mock data. Licensed commercial providers can be added later. Never scrapes consumer websites. Manual entry and overrides are always available.`}
+        title="Property details"
+        status="CONNECTED"
+        detail="Manual entry only. Enter estimated value, assessed value, taxes, beds, baths, square footage, lot size, and year built on each property. Pachtfolio does not scrape websites or pull third-party property feeds."
       />
 
       <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6">
