@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, type ChangeEvent } from "react";
 import { uploadPropertyPhotoAction } from "@/server/actions/documents";
 
 type Props = {
@@ -29,7 +29,7 @@ export function PropertyPhotoUpload({
     inputRef.current?.click();
   }
 
-  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
