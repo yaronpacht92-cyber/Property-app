@@ -602,6 +602,8 @@ model EmailThreadReference {
   category         EmailCategory  @default(OTHER)
   isImportant      Boolean        @default(false)
   matchMethod      String?
+  providerUrl      String?
+  hasAttachment    Boolean        @default(false)
   createdAt        DateTime       @default(now())
   organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   property         Property?      @relation(fields: [propertyId], references: [id])
@@ -609,6 +611,7 @@ model EmailThreadReference {
 
   @@unique([connectionId, externalThreadId])
   @@index([organizationId, propertyId])
+  @@index([organizationId, propertyId, receivedAt])
 }
 
 model AccountingConnection {

@@ -468,16 +468,41 @@ export default async function PropertyDetailPage({
       {tab === "emails" ? (
         <section className="space-y-3">
           <Alert tone="info" title="Email integration">
-            Connect Gmail or Microsoft in Settings to match live emails. Sample threads may appear
-            during development.
+            Connect Gmail or Microsoft in Settings → Integrations, then sync. Matched threads for
+            this property appear here. Pachtfolio does not send email.
           </Alert>
+          {property.emailThreads.length === 0 ? (
+            <p className="text-lg text-[var(--muted-foreground)]">
+              No emails matched to this property yet.{" "}
+              {hasPermission(session.user.permissions, PERMISSIONS.INTEGRATIONS_MANAGE) ? (
+                <Link href="/settings/integrations" className="font-semibold underline">
+                  Open Integrations
+                </Link>
+              ) : (
+                "Ask an admin to connect a mailbox."
+              )}
+            </p>
+          ) : null}
           {property.emailThreads.map((thread) => (
             <article key={thread.id} className="rounded-2xl border border-[var(--border)] bg-white p-4">
               <p className="text-xl font-semibold">{thread.subject}</p>
               <p className="text-lg text-[var(--muted-foreground)]">
-                {thread.sender} · {formatDate(thread.receivedAt)} · {thread.category.replaceAll("_", " ")}
+                {thread.sender} · {formatDate(thread.receivedAt)} ·{" "}
+                {thread.category.replaceAll("_", " ")}
+                {thread.hasAttachment ? " · attachment" : ""}
+                {thread.matchMethod ? ` · matched by ${thread.matchMethod.replaceAll("_", " ")}` : ""}
               </p>
-              <p className="mt-2 text-lg">{thread.snippet}</p>
+              {thread.snippet ? <p className="mt-2 text-lg">{thread.snippet}</p> : null}
+              {thread.providerUrl ? (
+                <a
+                  href={thread.providerUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-block text-lg font-semibold text-[var(--primary)] underline"
+                >
+                  Open in mailbox
+                </a>
+              ) : null}
             </article>
           ))}
         </section>

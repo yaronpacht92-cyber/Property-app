@@ -7,33 +7,81 @@ import { Alert } from "@/components/ui/alert";
 import { getAccountingAdapter } from "@/adapters/accounting";
 import { getEmailAdapter } from "@/adapters/email";
 import { formatDate } from "@/lib/utils";
+import {
+  AssignEmailThreadForm,
+  ConnectDemoEmailButton,
+  ConnectEmailButton,
+  DisconnectEmailButton,
+  SyncEmailButton,
+} from "@/components/integrations/email-actions";
 
-export default async function IntegrationsPage() {
+export default async function IntegrationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    emailConnected?: string;
+    emailError?: string;
+    connectionId?: string;
+  }>;
+}) {
   const session = await requirePermission(PERMISSIONS.INTEGRATIONS_MANAGE);
-  const [accounting, email, syncLogs] = await Promise.all([
+  const query = await searchParams;
+
+  const [accounting, emailConnections, syncLogs, unmatchedThreads, properties] = await Promise.all([
     prisma.accountingConnection.findFirst({
       where: { organizationId: session.user.organizationId },
     }),
-    prisma.emailConnection.findFirst({
+    prisma.emailConnection.findMany({
       where: { organizationId: session.user.organizationId },
+      orderBy: { provider: "asc" },
     }),
     prisma.integrationSyncLog.findMany({
       where: { organizationId: session.user.organizationId },
       orderBy: { startedAt: "desc" },
-      take: 5,
+      take: 8,
+    }),
+    prisma.emailThreadReference.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+        propertyId: null,
+      },
+      orderBy: { receivedAt: "desc" },
+      take: 20,
+    }),
+    prisma.property.findMany({
+      where: { organizationId: session.user.organizationId, deletedAt: null },
+      select: { id: true, nickname: true },
+      orderBy: { nickname: "asc" },
     }),
   ]);
 
   const qb = getAccountingAdapter();
-  const mail = getEmailAdapter();
+  const gmailReady = getEmailAdapter("GMAIL").isConfigured();
+  const microsoftReady = getEmailAdapter("MICROSOFT").isConfigured();
+  const gmail = emailConnections.find((item) => item.provider === "GMAIL");
+  const microsoft = emailConnections.find((item) => item.provider === "MICROSOFT");
+  const showDemo = process.env.APP_ENV !== "production";
 
   return (
     <div className="space-y-6 animate-fade-up">
       <BackLink href="/settings" label="Back to Settings" />
       <h1 className="text-4xl font-semibold">Integrations</h1>
+
+      {query.emailConnected ? (
+        <Alert tone="success" title="Email connected">
+          {query.emailConnected === "microsoft" ? "Microsoft" : "Gmail"} is connected. Use Sync now
+          to pull recent threads and match them to properties.
+        </Alert>
+      ) : null}
+      {query.emailError ? (
+        <Alert tone="danger" title="Email connection failed">
+          {query.emailError}
+        </Alert>
+      ) : null}
+
       <Alert tone="info" title="Core Pachtfolio works without connections">
-        Property values, taxes, and details are entered by hand. Live QuickBooks and email
-        connections are not wired yet; sample stubs may appear until OAuth apps are built.
+        Property values, taxes, and details stay manual. Email is read-only in version 1 — Pachtfolio
+        never sends mail from your account.
       </Alert>
 
       <IntegrationCard
@@ -41,11 +89,97 @@ export default async function IntegrationsPage() {
         status={accounting?.status || "NOT_CONFIGURED"}
         detail={`Adapter: ${qb.name}. Last sync: ${formatDate(accounting?.lastSyncAt)}. Mapping and read-only summaries are available after OAuth credentials are configured.`}
       />
-      <IntegrationCard
-        title="Email (Gmail / Microsoft)"
-        status={email?.status || "NOT_CONFIGURED"}
-        detail={`Adapter: ${mail.name}. Property matching uses addresses, nicknames, and keywords. Sending email from Pachtfolio is not enabled in version 1.`}
-      />
+
+      <article className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl font-semibold">Email (Gmail / Microsoft)</h2>
+          <Badge
+            tone={
+              emailConnections.some((c) => c.status === "CONNECTED")
+                ? "success"
+                : emailConnections.some((c) => c.status === "ERROR")
+                  ? "danger"
+                  : "neutral"
+            }
+          >
+            {emailConnections.some((c) => c.status === "CONNECTED")
+              ? "CONNECTED"
+              : "NOT CONFIGURED"}
+          </Badge>
+        </div>
+        <p className="mt-3 text-lg leading-relaxed">
+          Connect a mailbox to pull recent threads. Matching uses manager email, parcel number,
+          street address, and nickname. Ambiguous or unmatched threads can be assigned by hand
+          below.
+        </p>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <ProviderPanel
+            title="Gmail"
+            connection={gmail}
+            configured={gmailReady}
+            connectLabel="Connect Gmail"
+            provider="GMAIL"
+          />
+          <ProviderPanel
+            title="Microsoft Outlook"
+            connection={microsoft}
+            configured={microsoftReady}
+            connectLabel="Connect Microsoft"
+            provider="MICROSOFT"
+          />
+        </div>
+
+        {showDemo ? (
+          <div className="mt-5 rounded-2xl border border-dashed border-[var(--border-strong)] bg-white p-4">
+            <p className="text-lg font-semibold">Local demo mailbox</p>
+            <p className="mt-1 text-base text-[var(--muted-foreground)]">
+              No Google/Microsoft app required. Connects a sample inbox and syncs demo threads onto
+              your properties.
+            </p>
+            <div className="mt-3">
+              <ConnectDemoEmailButton />
+            </div>
+          </div>
+        ) : null}
+      </article>
+
+      <article className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6">
+        <h2 className="text-2xl font-semibold">Unmatched emails</h2>
+        <p className="mt-2 text-lg text-[var(--muted-foreground)]">
+          Threads that could not be matched automatically. Assign them to a property when you
+          recognize them.
+        </p>
+        {unmatchedThreads.length === 0 ? (
+          <p className="mt-4 text-lg text-[var(--muted-foreground)]">No unmatched emails right now.</p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {unmatchedThreads.map((thread) => (
+              <li key={thread.id} className="rounded-2xl border border-[var(--border)] bg-white p-4">
+                <p className="text-xl font-semibold">{thread.subject}</p>
+                <p className="text-lg text-[var(--muted-foreground)]">
+                  {thread.sender || "Unknown sender"} · {formatDate(thread.receivedAt)} ·{" "}
+                  {thread.category.replaceAll("_", " ")}
+                  {thread.matchMethod === "ambiguous" ? " · ambiguous match" : ""}
+                </p>
+                {thread.snippet ? <p className="mt-2 text-lg">{thread.snippet}</p> : null}
+                {thread.providerUrl ? (
+                  <a
+                    href={thread.providerUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-block text-lg font-semibold text-[var(--primary)] underline"
+                  >
+                    Open in mailbox
+                  </a>
+                ) : null}
+                <AssignEmailThreadForm threadId={thread.id} properties={properties} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
+
       <IntegrationCard
         title="Property details"
         status="CONNECTED"
@@ -71,6 +205,67 @@ export default async function IntegrationsPage() {
   );
 }
 
+function ProviderPanel({
+  title,
+  connection,
+  configured,
+  connectLabel,
+  provider,
+}: {
+  title: string;
+  connection:
+    | {
+        id: string;
+        status: string;
+        accountEmail: string | null;
+        lastSyncAt: Date | null;
+        lastError: string | null;
+      }
+    | undefined;
+  configured: boolean;
+  connectLabel: string;
+  provider: "GMAIL" | "MICROSOFT";
+}) {
+  const connected = connection?.status === "CONNECTED";
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-xl font-semibold">{title}</h3>
+        <Badge
+          tone={
+            connected ? "success" : connection?.status === "ERROR" ? "danger" : "neutral"
+          }
+        >
+          {(connection?.status || (configured ? "READY" : "NOT_CONFIGURED")).replaceAll("_", " ")}
+        </Badge>
+      </div>
+      <p className="mt-2 text-base text-[var(--muted-foreground)]">
+        {connection?.accountEmail
+          ? `Account: ${connection.accountEmail}`
+          : configured
+            ? "OAuth app credentials are configured."
+            : "Add OAuth credentials in the environment to enable Connect."}
+      </p>
+      <p className="mt-1 text-base text-[var(--muted-foreground)]">
+        Last sync: {formatDate(connection?.lastSyncAt)}
+      </p>
+      {connection?.lastError ? (
+        <p className="mt-2 text-base text-[var(--danger)]">{connection.lastError}</p>
+      ) : null}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {!connected ? (
+          <ConnectEmailButton provider={provider} label={connectLabel} disabled={!configured} />
+        ) : (
+          <>
+            <SyncEmailButton connectionId={connection.id} />
+            <DisconnectEmailButton connectionId={connection.id} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function IntegrationCard({
   title,
   status,
@@ -89,10 +284,6 @@ function IntegrationCard({
         </Badge>
       </div>
       <p className="mt-3 text-lg leading-relaxed">{detail}</p>
-      <p className="mt-4 text-base text-[var(--muted-foreground)]">
-        Reconnect and manual sync buttons appear here once OAuth apps are configured in the
-        environment.
-      </p>
     </article>
   );
 }

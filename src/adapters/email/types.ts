@@ -1,3 +1,5 @@
+export type EmailProviderId = "GMAIL" | "MICROSOFT";
+
 export type MatchedEmail = {
   externalThreadId: string;
   subject: string;
@@ -9,9 +11,20 @@ export type MatchedEmail = {
   providerUrl: string;
 };
 
+export type OAuthTokenSet = {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  scope?: string;
+  accountEmail: string;
+};
+
 export interface EmailAdapter {
   name: string;
-  provider: "GMAIL" | "MICROSOFT";
-  getConnectionStatus(): Promise<"connected" | "disconnected" | "error" | "not_configured">;
-  searchPropertyEmails(keywords: string[]): Promise<MatchedEmail[]>;
+  provider: EmailProviderId;
+  isConfigured(): boolean;
+  getAuthorizeUrl(state: string): string;
+  exchangeCode(code: string): Promise<OAuthTokenSet>;
+  refreshAccessToken(refreshToken: string): Promise<Omit<OAuthTokenSet, "accountEmail"> & { accountEmail?: string }>;
+  listRecentEmails(accessToken: string, options?: { maxResults?: number }): Promise<MatchedEmail[]>;
 }
