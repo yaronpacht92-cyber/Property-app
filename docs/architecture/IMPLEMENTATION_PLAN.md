@@ -32,10 +32,13 @@
 - Manual valuation, tax, and property detail entry
 - Manual override of estimated values
 
-## Phase 3 — QuickBooks (read-only)
+## Phase 3 — Quicken (read-only file import)
 
-- OAuth connection, mapping UI, financial summary
-- Sync history, idempotent sync, reconnect
+- Enable Quicken on Settings → Integrations
+- Import OFX / QFX / QIF / CSV exports from Quicken
+- Map properties to Quicken account names or categories/tags
+- Match transactions; assign unmatched manually
+- No write-back to Quicken (no public Quicken OAuth API)
 
 ## Phase 4 — Email
 
@@ -53,7 +56,7 @@
 | Integration | Dependency | Limitation |
 |-------------|------------|------------|
 | Property data | None | Manual entry only; no scraping or third-party feeds |
-| QuickBooks | Intuit OAuth app | v1 read-only; mapping varies by household |
+| Quicken | Exported OFX/QFX/QIF/CSV | File import only; no Quicken cloud OAuth |
 | Gmail | Google Cloud OAuth | Import references only, not full mailbox dump |
 | Microsoft | Azure app registration | Same as Gmail |
 | S3 | Bucket + IAM | Private; malware scan async |

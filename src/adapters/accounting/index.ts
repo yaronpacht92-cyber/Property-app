@@ -1,9 +1,8 @@
-import { MockQuickBooksAdapter } from "@/adapters/accounting/mock-quickbooks";
+import { QuickenAdapter } from "@/adapters/accounting/quicken";
 import type { AccountingAdapter } from "@/adapters/accounting/types";
 
 export function getAccountingAdapter(): AccountingAdapter {
-  // Real QuickBooks OAuth adapter replaces this when credentials exist.
-  return new MockQuickBooksAdapter();
+  return new QuickenAdapter();
 }
 
-export type { AccountingAdapter } from "@/adapters/accounting/types";
+export type { AccountingAdapter, AccountingSummary } from "@/adapters/accounting/types";

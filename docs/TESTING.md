@@ -35,7 +35,7 @@ Smoke scenario: login page readability. Expand with authenticated flows as Phase
 3. Sign in as family member and record a water heater replacement.
 4. Upload an insurance policy document.
 5. Confirm insurance renewal reminders appear.
-6. Open Settings → Integrations (QuickBooks/email stubs).
+6. Open Settings → Integrations (Quicken import + email).
 7. Attempt edits as read-only user (denied).
 8. Confirm another organization cannot see seeded properties (isolation test).
 9. Manually override an estimated property value.

@@ -359,11 +359,16 @@ export default async function PropertyDetailPage({
               <li>Entered manually · Updated {formatDate(tax?.sourceUpdatedAt || tax?.createdAt)}</li>
             </ul>
           </InfoPanel>
-          <InfoPanel title="QuickBooks summary (read-only)">
-            {property.accountingMappings.length === 0 ? (
+          <InfoPanel title="Quicken summary (read-only)">
+            {property.accountingMappings.length === 0 && property.financialTransactions.length === 0 ? (
               <p className="text-lg">
-                No QuickBooks mapping yet. An administrator can connect and map this property in
-                Settings.
+                No Quicken transactions yet. An administrator can import a Quicken export and map
+                this property in Settings → Integrations.
+              </p>
+            ) : property.financialTransactions.length === 0 ? (
+              <p className="text-lg">
+                This property is mapped to Quicken, but no matching transactions have been imported
+                yet.
               </p>
             ) : (
               <ul className="space-y-2 text-lg">

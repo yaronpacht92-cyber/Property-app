@@ -610,7 +610,7 @@ async function main() {
   const qb = await prisma.accountingConnection.create({
     data: {
       organizationId: org.id,
-      provider: "QUICKBOOKS",
+      provider: "QUICKEN",
       status: "NOT_CONFIGURED",
       lastError: null,
     },
@@ -620,9 +620,9 @@ async function main() {
     data: {
       propertyId: oak.id,
       connectionId: qb.id,
-      mappingType: "CLASS",
-      externalId: "sample-class-oak",
-      externalName: "Oak Street (Sample Class)",
+      mappingType: "ACCOUNT",
+      externalId: "oak-street-rental",
+      externalName: "Oak Street Rental",
     },
   });
 

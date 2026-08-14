@@ -144,6 +144,8 @@ enum EmailCategory {
 }
 
 enum AccountingProvider {
+  QUICKEN
+  /// Legacy stub value; new connections use QUICKEN.
   QUICKBOOKS
 }
 

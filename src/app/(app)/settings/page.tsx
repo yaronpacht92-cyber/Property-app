@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   const links = [
     { href: "/settings/security", label: "Security", description: "Password and two-step verification", show: true },
     { href: "/settings/users", label: "Family users", description: "Add or remove people who can sign in", show: isAdmin },
-    { href: "/settings/integrations", label: "Integrations", description: "QuickBooks and email connections", show: isAdmin },
+    { href: "/settings/integrations", label: "Integrations", description: "Quicken and email connections", show: isAdmin },
     { href: "/settings/reminders", label: "Reminder defaults", description: "When insurance reminders are created", show: isAdmin },
     { href: "/settings/audit", label: "Audit history", description: "Important changes made in Pachtfolio", show: hasPermission(session.user.permissions, PERMISSIONS.AUDIT_READ) },
   ].filter((item) => item.show);

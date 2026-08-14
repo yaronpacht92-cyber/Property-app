@@ -40,7 +40,9 @@ export default async function HomePage({
       orderBy: { updatedAt: "desc" },
       take: 5,
     }),
-    prisma.accountingConnection.findFirst({ where: { organizationId: orgId } }),
+    prisma.accountingConnection.findFirst({
+      where: { organizationId: orgId, provider: "QUICKEN" },
+    }),
     prisma.emailConnection.findFirst({ where: { organizationId: orgId } }),
   ]);
 
@@ -193,7 +195,7 @@ export default async function HomePage({
             <h2 className="text-3xl font-semibold">Integrations</h2>
             <ul className="mt-4 space-y-3 text-lg">
               <li className="flex items-center justify-between rounded-2xl bg-white px-4 py-3">
-                <span>QuickBooks</span>
+                <span>Quicken</span>
                 <Badge tone={accounting?.status === "CONNECTED" ? "success" : "neutral"}>
                   {statusLabel(accounting?.status)}
                 </Badge>

@@ -63,7 +63,7 @@ Organization ──< Membership >── User
 ### Integrations
 - **EmailConnection** — organizationId, provider (GMAIL|MICROSOFT), status, tokenVaultRef, lastSyncAt
 - **EmailThreadReference** — organizationId, propertyId?, connectionId, externalThreadId, subject, snippet, sender, receivedAt, category, isImportant, matchMethod
-- **AccountingConnection** — organizationId, provider (QUICKBOOKS), status, tokenVaultRef, lastSyncAt, realmId
+- **AccountingConnection** — organizationId, provider (QUICKEN; legacy QUICKBOOKS retained), status, tokenVaultRef, lastSyncAt, realmId (last import account label)
 - **AccountingPropertyMapping** — propertyId, connectionId, mappingType (CLASS|CUSTOMER|PROJECT|LOCATION|ACCOUNT|CUSTOM), externalId, externalName
 - **FinancialTransactionReference** — organizationId, propertyId?, connectionId, externalTxnId, amount, txnDate, category, memo, matched
 - **IntegrationSyncLog** — organizationId, connectionType, connectionId, status, startedAt, finishedAt, message (non-sensitive), recordsProcessed

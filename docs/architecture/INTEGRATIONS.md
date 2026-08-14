@@ -4,23 +4,32 @@
 
 All external systems are accessed through interfaces in `src/adapters/`:
 
-- `accounting` — QuickBooks (read-only v1; stub today)
+- `accounting` — Quicken (file import: OFX / QFX / QIF / CSV)
 - `email` — Gmail / Microsoft Graph (OAuth + sync implemented)
 - `storage` — local or S3-compatible
 - `notifications` — reminder delivery
 
 Property values, taxes, and physical details are **manual entry only**. Pachtfolio does not scrape websites or pull third-party property data feeds.
 
-Mock adapters are used for QuickBooks when credentials are missing. Email uses real OAuth adapters when credentials are present, plus a **demo mailbox** in non-production for local testing.
+Quicken has **no public third-party OAuth API**, so Pachtfolio does not connect to Quicken Online like QuickBooks Online. Families export from Quicken and import the file into Pachtfolio. Email uses real OAuth adapters when credentials are present, plus a **demo mailbox** in non-production.
 
-## QuickBooks Online (Phase 3)
+## Quicken (replaces QuickBooks stub)
 
-1. Create an Intuit developer app.
-2. Set redirect URI to `${AUTH_URL}/api/integrations/quickbooks/callback`.
-3. Configure `QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_CLIENT_SECRET`, `QUICKBOOKS_REDIRECT_URI`, `QUICKBOOKS_ENVIRONMENT`.
-4. Admin connects from Settings → Integrations.
-5. Map each property to Class / Customer / Project / Location / Account / Custom field.
-6. Sync is idempotent and read-only; Pachtfolio does not change QuickBooks records in v1.
+1. Admin opens **Settings → Integrations** and clicks **Enable Quicken** (or **Import sample Quicken file** in development).
+2. In Quicken, export the rental account register as **OFX**, **QFX**, **QIF**, or **CSV**.
+3. Import the file on the Integrations page.
+4. Map each property to a Quicken **account name** or **category/tag**.
+5. Matching priority: mapped account → mapped category → nickname in payee/memo → street address.
+6. Unmatched transactions can be assigned manually. Re-imports are idempotent by transaction ID (`FITID` / hash).
+7. Pachtfolio is **read-only** toward Quicken — it never writes back to the Quicken file.
+
+Supported formats:
+
+| Extension | Notes |
+|-----------|--------|
+| `.ofx` / `.qfx` | Bank-style statement download / Web Connect export |
+| `.qif` | Classic Quicken exchange format |
+| `.csv` | Register export with Date + Amount columns (Payee/Category/Memo/Account optional) |
 
 ## Gmail
 
@@ -41,7 +50,7 @@ Mock adapters are used for QuickBooks when credentials are missing. Email uses r
 
 ## Demo mailbox (development)
 
-When `APP_ENV` is not `production`, Integrations shows **Connect demo mailbox**. This stores encrypted demo tokens and syncs sample threads without Google/Microsoft apps.
+When `APP_ENV` is not `production`, Integrations shows **Connect demo mailbox**. This stores encrypted demo tokens and syncs sample threads without Google/Microsoft apps. The same environment also offers **Import sample Quicken file**.
 
 ## File storage
 
@@ -52,4 +61,4 @@ When `APP_ENV` is not `production`, Integrations shows **Connect demo mailbox**.
 
 ## Token storage
 
-OAuth refresh/access tokens are stored encrypted (`ENCRYPTION_KEY`) in `EmailConnection.tokenVaultRef` via `src/lib/token-vault.ts`. Tokens are never logged. OAuth `state` is HMAC-signed in `src/lib/oauth-state.ts`.
+OAuth refresh/access tokens (email) are stored encrypted (`ENCRYPTION_KEY`) in `EmailConnection.tokenVaultRef` via `src/lib/token-vault.ts`. Tokens are never logged. OAuth `state` is HMAC-signed in `src/lib/oauth-state.ts`. Quicken uses file import only and does not store Quicken credentials.

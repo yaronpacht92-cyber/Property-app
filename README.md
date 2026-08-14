@@ -37,8 +37,8 @@ Pachtfolio replaces scattered paper files and disconnected tools with one proper
 |-------|-------|--------|
 | 1 | Auth, RBAC, org isolation, properties, maintenance, documents, reminders, notes, audit, search | Implemented |
 | 2 | Licensed property valuation/tax providers | Adapter + mock ready |
-| 3 | QuickBooks Online read-only OAuth | Adapter + UI stubs |
-| 4 | Gmail / Microsoft email matching | Adapter + UI stubs |
+| 3 | Quicken file import (OFX/QFX/QIF/CSV) | Implemented |
+| 4 | Gmail / Microsoft email matching | Implemented |
 | 5 | Email reminders, hardening, a11y/security validation | Foundation in place |
 
 ## Local setup
@@ -110,13 +110,13 @@ npm run db:deploy    # apply migrations in staging/production
 | Feature | Development default | Production path |
 |---------|---------------------|-----------------|
 | Property valuation/tax/details | Manual entry only | Manual entry only |
-| QuickBooks | Not configured / sample txn refs | OAuth 2.0 read-only sync (not wired yet) |
-| Gmail / Microsoft | Not configured / sample threads | OAuth matching (not wired yet) |
+| Quicken | File import (OFX/QFX/QIF/CSV) | Same — no Quicken cloud OAuth |
+| Gmail / Microsoft | Demo mailbox / OAuth when configured | OAuth matching |
 | File storage | Local disk under `storage/uploads` | Private S3-compatible bucket + signed URLs |
 | Malware scan | Local job marks SKIPPED/CLEAN | AV scanner workflow |
 | Notifications | Mock adapter | Email provider |
 
-Property details are entered by hand. The core app never depends on live QuickBooks or email connections.
+Property details are entered by hand. The core app never depends on live Quicken or email connections.
 
 ## Security highlights
 
@@ -156,7 +156,7 @@ See [`docs/architecture/DEPLOYMENT.md`](docs/architecture/DEPLOYMENT.md).
 - [x] Document upload and search
 - [x] Insurance policies and renewal reminders
 - [x] Tax/valuation storage with manual override
-- [x] QuickBooks/email connection surfaces (mock until configured)
+- [x] Quicken file import and email connection surfaces
 - [x] Property manager contact in one click
 - [x] Cross-organization access denied
 - [x] Audit log for important actions
