@@ -9,6 +9,11 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
 import { getFileStorage } from "@/adapters/storage";
 import { enqueueMalwareScan } from "@/jobs/malware-scan";
+import {
+  isAllowedPropertyPhoto,
+  MAX_PROPERTY_PHOTO_BYTES,
+  normalizePropertyPhoto,
+} from "@/lib/property-photo";
 
 const ALLOWED_MIME = new Set([
   "application/pdf",
@@ -127,8 +132,6 @@ export async function uploadDocumentAction(formData: FormData) {
   redirect("/documents?uploaded=1");
 }
 
-const PHOTO_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
-
 /** Upload or replace the property profile photo from the photo area. */
 export async function uploadPropertyPhotoAction(propertyId: string, formData: FormData) {
   const session = await requirePermission(PERMISSIONS.DOCUMENTS_WRITE);
@@ -144,62 +147,154 @@ export async function uploadPropertyPhotoAction(propertyId: string, formData: Fo
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Please choose a photo to upload." };
   }
-  if (file.size > MAX_BYTES) {
-    return { error: "That photo is too large. Please use a file under 15 MB." };
+  if (file.size > MAX_PROPERTY_PHOTO_BYTES) {
+    return { error: "That photo is too large. Please use a file under 10 MB." };
   }
-  if (!PHOTO_MIME.has(file.type)) {
-    return { error: "Please upload a JPEG, PNG, or WebP photo." };
+  if (!isAllowedPropertyPhoto(file.type, file.name)) {
+    return { error: "Please upload a JPG, JPEG, PNG, WebP, or HEIC photo." };
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const storage = getFileStorage();
-  const stored = await storage.upload({
-    organizationId: session.user.organizationId,
-    fileName: file.name,
-    mimeType: file.type,
-    data: buffer,
-  });
+  try {
+    const raw = Buffer.from(await file.arrayBuffer());
+    const normalized = await normalizePropertyPhoto({
+      data: raw,
+      mimeType: file.type,
+      fileName: file.name,
+    });
 
-  const document = await prisma.document.create({
-    data: {
+    const storage = getFileStorage();
+    const previous =
+      property.photoDocumentId
+        ? await prisma.document.findFirst({
+            where: {
+              id: property.photoDocumentId,
+              organizationId: session.user.organizationId,
+              deletedAt: null,
+            },
+          })
+        : null;
+
+    const stored = await storage.upload({
       organizationId: session.user.organizationId,
-      propertyId,
-      category: "PHOTO",
-      name: `Property photo — ${property.nickname}`,
-      storageKey: stored.storageKey,
-      mimeType: stored.mimeType,
-      sizeBytes: stored.sizeBytes,
-      uploadedById: session.user.id,
-      scanStatus: "PENDING",
-      notes: "Uploaded from property photo area",
+      fileName: normalized.fileName,
+      mimeType: normalized.mimeType,
+      data: normalized.data,
+    });
+
+    const document = await prisma.document.create({
+      data: {
+        organizationId: session.user.organizationId,
+        propertyId,
+        category: "PHOTO",
+        name: `Property photo — ${property.nickname}`,
+        storageKey: stored.storageKey,
+        mimeType: stored.mimeType,
+        sizeBytes: stored.sizeBytes,
+        uploadedById: session.user.id,
+        scanStatus: "PENDING",
+        notes: "Uploaded from property photo area",
+      },
+    });
+
+    await enqueueMalwareScan(document.id);
+
+    await prisma.property.update({
+      where: { id: propertyId },
+      data: {
+        photoDocumentId: document.id,
+        updatedById: session.user.id,
+      },
+    });
+
+    if (previous) {
+      await prisma.document.update({
+        where: { id: previous.id },
+        data: { deletedAt: new Date() },
+      });
+      await storage.delete(previous.storageKey).catch(() => undefined);
+    }
+
+    await writeAuditLog({
+      organizationId: session.user.organizationId,
+      actorUserId: session.user.id,
+      action: "property.photo_uploaded",
+      entityType: "Property",
+      entityId: propertyId,
+      summary: `Updated photo for ${property.nickname}`,
+      metadata: {
+        documentId: document.id,
+        storageKey: stored.storageKey,
+        storageDriver: storage.name,
+      },
+    });
+
+    revalidatePath(`/properties/${propertyId}`);
+    revalidatePath("/properties");
+    revalidatePath("/home");
+    revalidatePath("/documents");
+    return { success: "Property photo saved." };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Photo upload failed. Please try again.",
+    };
+  }
+}
+
+export async function removePropertyPhotoAction(propertyId: string) {
+  const session = await requirePermission(PERMISSIONS.DOCUMENTS_WRITE);
+  const property = await assertPropertyAccess(
+    propertyId,
+    session.user.organizationId,
+    session.user.id,
+    session.user.roleKey,
+  );
+  if (!property) return { error: "We could not find that property." };
+  if (!property.photoDocumentId) {
+    return { error: "This property does not have a photo to remove." };
+  }
+
+  const document = await prisma.document.findFirst({
+    where: {
+      id: property.photoDocumentId,
+      organizationId: session.user.organizationId,
+      deletedAt: null,
     },
   });
-
-  await enqueueMalwareScan(document.id);
 
   await prisma.property.update({
     where: { id: propertyId },
     data: {
-      photoDocumentId: document.id,
+      photoDocumentId: null,
       updatedById: session.user.id,
     },
   });
 
+  if (document) {
+    await prisma.document.update({
+      where: { id: document.id },
+      data: { deletedAt: new Date() },
+    });
+    const storage = getFileStorage();
+    await storage.delete(document.storageKey).catch(() => undefined);
+  }
+
   await writeAuditLog({
     organizationId: session.user.organizationId,
     actorUserId: session.user.id,
-    action: "property.photo_uploaded",
+    action: "property.photo_removed",
     entityType: "Property",
     entityId: propertyId,
-    summary: `Updated photo for ${property.nickname}`,
-    metadata: { documentId: document.id },
+    summary: `Removed photo for ${property.nickname}`,
   });
 
   revalidatePath(`/properties/${propertyId}`);
   revalidatePath("/properties");
   revalidatePath("/home");
   revalidatePath("/documents");
-  return { success: "Property photo saved." };
+  return { success: "Property photo removed." };
 }
 
 export async function archiveDocumentAction(documentId: string) {

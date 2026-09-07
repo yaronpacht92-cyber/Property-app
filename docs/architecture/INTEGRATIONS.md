@@ -54,9 +54,12 @@ When `APP_ENV` is not `production`, Integrations shows **Connect demo mailbox**.
 
 ## File storage
 
-- Development: `FILE_STORAGE_DRIVER=local`
-- Production: S3-compatible bucket, private ACL, short-lived signed download URLs
+- Development: `FILE_STORAGE_DRIVER=local` (server disk under `FILE_STORAGE_LOCAL_DIR`)
+- Production / deployed: `FILE_STORAGE_DRIVER=s3` with `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (AWS S3, MinIO, R2, etc.)
+- Property photos and documents are uploaded through the storage adapter and saved as `Document.storageKey` on the property (`photoDocumentId`). Downloads are authenticated via `/api/files/download`.
+- There is no Supabase Storage in this project; do not introduce a second provider.
 - Uploads validated by MIME allowlist + size limit + malware scan job
+- **Property photo:** Choose Photo → preview → Save Photo (JPG/JPEG/PNG/WebP/HEIC, max 10 MB). HEIC is converted to JPEG on upload when possible.
 - **Add Property → Import from a document** can read a user-uploaded PDF/scan/text file on the server (OCR for images) and suggest form fields. It does not scrape Zillow, Redfin, or other listing sites. Always review autofilled values.
 
 ## Token storage

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { LocalFileStorageAdapter } from "@/adapters/storage/local";
+import { getFileStorage } from "@/adapters/storage";
 import { hasPermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const storage = new LocalFileStorageAdapter();
+    const storage = getFileStorage();
     const data = await storage.read(document.storageKey);
     return new NextResponse(new Uint8Array(data), {
       headers: {

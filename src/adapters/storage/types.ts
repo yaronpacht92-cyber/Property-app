@@ -19,4 +19,5 @@ export interface FileStorageAdapter {
   }): Promise<StoredFile>;
   getSignedDownloadUrl(storageKey: string, expiresInSeconds?: number): Promise<SignedUrl>;
   delete(storageKey: string): Promise<void>;
+  read(storageKey: string): Promise<Buffer>;
 }

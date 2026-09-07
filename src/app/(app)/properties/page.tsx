@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { formatCurrency, formatDate, propertyTypeLabel } from "@/lib/utils";
+import { getFileStorage } from "@/adapters/storage";
 import type { PropertyType } from "@prisma/client";
 
 const FILTERS: { key: string; label: string; type?: PropertyType }[] = [
@@ -54,6 +55,27 @@ export default async function PropertiesPage({
     },
     orderBy: { nickname: "asc" },
   });
+
+  const photoIds = properties
+    .map((property) => property.photoDocumentId)
+    .filter((id): id is string => Boolean(id));
+  const photoDocs = photoIds.length
+    ? await prisma.document.findMany({
+        where: {
+          id: { in: photoIds },
+          organizationId: session.user.organizationId,
+          deletedAt: null,
+        },
+      })
+    : [];
+  const storage = getFileStorage();
+  const photoUrlByDocId = new Map<string, string>();
+  await Promise.all(
+    photoDocs.map(async (doc) => {
+      const signed = await storage.getSignedDownloadUrl(doc.storageKey, 600);
+      photoUrlByDocId.set(doc.id, signed.url);
+    }),
+  );
 
   const canAdd = hasPermission(session.user.permissions, PERMISSIONS.PROPERTIES_WRITE);
 
@@ -113,18 +135,32 @@ export default async function PropertiesPage({
             const manager = property.contacts[0]?.contact;
             const reminder = property.reminders[0];
             const ownerLabel = property.owners.map((o) => o.name).join(", ");
+            const photoUrl = property.photoDocumentId
+              ? photoUrlByDocId.get(property.photoDocumentId)
+              : undefined;
             return (
               <article
                 key={property.id}
                 className="grid gap-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 md:grid-cols-[180px_1fr_auto] md:items-center"
               >
                 <div
-                  className="flex min-h-36 items-center justify-center rounded-2xl bg-[var(--muted)] text-center text-base font-semibold text-[var(--muted-foreground)]"
-                  aria-hidden="true"
+                  className="relative min-h-36 overflow-hidden rounded-2xl bg-[var(--muted)] text-center text-base font-semibold text-[var(--muted-foreground)]"
+                  aria-hidden={photoUrl ? undefined : true}
                 >
-                  Property photo
-                  <br />
-                  not added yet
+                  {photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photoUrl}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex min-h-36 items-center justify-center px-3">
+                      Property photo
+                      <br />
+                      not added yet
+                    </div>
+                  )}
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
