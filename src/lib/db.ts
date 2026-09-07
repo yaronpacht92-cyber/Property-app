@@ -8,10 +8,21 @@ const globalForPrisma = globalThis as unknown as {
   pgPool: Pool | undefined;
 };
 
+function isNextBuildPhase() {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
 function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL;
+  let connectionString = process.env.DATABASE_URL;
+
+  // Vercel compiles pages without secrets sometimes; don't crash the build.
+  // Runtime requests still require a real DATABASE_URL.
   if (!connectionString) {
-    throw new Error("DATABASE_URL is not configured.");
+    if (isNextBuildPhase()) {
+      connectionString = "postgresql://build:build@127.0.0.1:5432/build";
+    } else {
+      throw new Error("DATABASE_URL is not configured.");
+    }
   }
 
   const poolConfig: PoolConfig = {
@@ -40,8 +51,18 @@ function createPrismaClient() {
   return client;
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+function getPrisma() {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+  return globalForPrisma.prisma;
 }
+
+/** Lazy client so `next build` can import route modules without a live database. */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    const client = getPrisma();
+    const value = Reflect.get(client as object, prop, receiver);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
