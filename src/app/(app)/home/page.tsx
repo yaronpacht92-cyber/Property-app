@@ -12,7 +12,7 @@ import { AlertTriangle, Building2, CalendarClock, FileWarning, Wrench } from "lu
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; q?: string }>;
+  searchParams: Promise<{ error?: string; q?: string; welcome?: string }>;
 }) {
   const session = await requireSession();
   const params = await searchParams;
@@ -59,6 +59,13 @@ export default async function HomePage({
 
   return (
     <div className="space-y-8 animate-fade-up">
+      {params.welcome ? (
+        <Alert tone="success" title="Welcome to Pachtfolio">
+          Your family portfolio is ready. Add your first property when you are ready, and invite
+          family members later from Settings → Family users.
+        </Alert>
+      ) : null}
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl font-semibold md:text-5xl">

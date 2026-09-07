@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { AuthError } from "next-auth";
 import { auth, signIn } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { HelpTip } from "@/components/ui/help-tip";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; callbackUrl?: string }>;
+  searchParams: Promise<{ error?: string; callbackUrl?: string; created?: string }>;
 }) {
   const session = await auth();
   if (session?.user) redirect("/home");
@@ -26,6 +27,12 @@ export default async function LoginPage({
         <p className="mt-2 text-lg text-[var(--muted-foreground)]">
           Your family&apos;s calm place for every property, document, and reminder.
         </p>
+
+        {params.created ? (
+          <Alert className="mt-6" tone="success" title="Account created">
+            Your family portfolio is ready. Sign in with the email and password you just set.
+          </Alert>
+        ) : null}
 
         {params.error ? (
           <Alert className="mt-6" tone="danger" title="We could not sign you in">
@@ -100,13 +107,21 @@ export default async function LoginPage({
           </Button>
         </form>
 
+        <p className="mt-6 text-center text-lg text-[var(--muted-foreground)]">
+          New to Pachtfolio?{" "}
+          <Link href="/signup" className="font-semibold text-[var(--primary)] underline">
+            Create an account
+          </Link>
+        </p>
+
         <div className="mt-8 rounded-2xl bg-[var(--muted)] p-4 text-base leading-relaxed">
           <p className="font-semibold">Sample development logins</p>
           <p className="mt-1">admin@pachtfolio.local / ChangeMe!Pachtfolio1</p>
           <p>member@pachtfolio.local / ChangeMe!Pachtfolio1</p>
           <p>readonly@pachtfolio.local / ChangeMe!Pachtfolio1</p>
           <p className="mt-2 text-[var(--muted-foreground)]">
-            The admin fields above are prefilled for this demo. Click Sign in to continue.
+            The admin fields above are prefilled for this demo. Click Sign in to continue. Or create
+            a separate family portfolio with Create an account.
           </p>
         </div>
       </div>
