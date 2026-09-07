@@ -9,6 +9,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { createOrganizationWithRoles } from "@/lib/organization-bootstrap";
 import { rateLimit } from "@/lib/rate-limit";
+import { isPublicSignupEnabled } from "@/lib/runtime-flags";
 
 const schema = z
   .object({
@@ -29,6 +30,11 @@ const schema = z
   });
 
 export async function createAccountAction(formData: FormData) {
+  if (!isPublicSignupEnabled()) {
+    return {
+      error: "Public account registration is turned off for this Pachtfolio deployment.",
+    };
+  }
   const limited = rateLimit(
     `register:${String(formData.get("email") || "unknown").toLowerCase()}`,
     5,

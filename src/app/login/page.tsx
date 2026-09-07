@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { HelpTip } from "@/components/ui/help-tip";
+import { isPublicSignupEnabled } from "@/lib/runtime-flags";
 
 export default async function LoginPage({
   searchParams,
@@ -16,6 +17,8 @@ export default async function LoginPage({
   const session = await auth();
   if (session?.user) redirect("/home");
   const params = await searchParams;
+  const signupEnabled = isPublicSignupEnabled();
+  const showDemoHints = process.env.APP_ENV !== "production" && process.env.NODE_ENV !== "production";
 
   return (
     <div className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 py-10">
@@ -36,9 +39,11 @@ export default async function LoginPage({
 
         {params.error ? (
           <Alert className="mt-6" tone="danger" title="We could not sign you in">
-            Please check your email and password. Use the sample logins below exactly as shown,
-            including the capital letters in the password. If you use a security code, enter it
-            below.
+            Please check your email and password
+            {showDemoHints
+              ? ". Use the sample logins below exactly as shown, including the capital letters in the password."
+              : "."}{" "}
+            If you use a security code, enter it below.
           </Alert>
         ) : null}
 
@@ -73,7 +78,7 @@ export default async function LoginPage({
               type="email"
               autoComplete="username"
               required
-              defaultValue="admin@pachtfolio.local"
+              defaultValue={showDemoHints ? "admin@pachtfolio.local" : undefined}
               placeholder="you@example.com"
             />
           </div>
@@ -85,7 +90,7 @@ export default async function LoginPage({
               type="password"
               autoComplete="current-password"
               required
-              defaultValue="ChangeMe!Pachtfolio1"
+              defaultValue={showDemoHints ? "ChangeMe!Pachtfolio1" : undefined}
               placeholder="Your password"
             />
           </div>
@@ -107,23 +112,30 @@ export default async function LoginPage({
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-lg text-[var(--muted-foreground)]">
-          New to Pachtfolio?{" "}
-          <Link href="/signup" className="font-semibold text-[var(--primary)] underline">
-            Create an account
-          </Link>
-        </p>
-
-        <div className="mt-8 rounded-2xl bg-[var(--muted)] p-4 text-base leading-relaxed">
-          <p className="font-semibold">Sample development logins</p>
-          <p className="mt-1">admin@pachtfolio.local / ChangeMe!Pachtfolio1</p>
-          <p>member@pachtfolio.local / ChangeMe!Pachtfolio1</p>
-          <p>readonly@pachtfolio.local / ChangeMe!Pachtfolio1</p>
-          <p className="mt-2 text-[var(--muted-foreground)]">
-            The admin fields above are prefilled for this demo. Click Sign in to continue. Or create
-            a separate family portfolio with Create an account.
+        {signupEnabled ? (
+          <p className="mt-6 text-center text-lg text-[var(--muted-foreground)]">
+            New to Pachtfolio?{" "}
+            <Link href="/signup" className="font-semibold text-[var(--primary)] underline">
+              Create an account
+            </Link>
           </p>
-        </div>
+        ) : (
+          <p className="mt-6 text-center text-base text-[var(--muted-foreground)]">
+            Access is by invitation only. Sign in with your existing account.
+          </p>
+        )}
+
+        {showDemoHints ? (
+          <div className="mt-8 rounded-2xl bg-[var(--muted)] p-4 text-base leading-relaxed">
+            <p className="font-semibold">Sample development logins</p>
+            <p className="mt-1">admin@pachtfolio.local / ChangeMe!Pachtfolio1</p>
+            <p>member@pachtfolio.local / ChangeMe!Pachtfolio1</p>
+            <p>readonly@pachtfolio.local / ChangeMe!Pachtfolio1</p>
+            <p className="mt-2 text-[var(--muted-foreground)]">
+              The admin fields above are prefilled for this demo. Click Sign in to continue.
+            </p>
+          </div>
+        ) : null}
       </div>
     </div>
   );

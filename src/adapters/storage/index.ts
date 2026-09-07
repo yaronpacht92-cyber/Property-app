@@ -1,6 +1,7 @@
 import { LocalFileStorageAdapter } from "@/adapters/storage/local";
 import { S3FileStorageAdapter } from "@/adapters/storage/s3";
 import type { FileStorageAdapter } from "@/adapters/storage/types";
+import { isProductionRuntime } from "@/lib/runtime-flags";
 
 let adapter: FileStorageAdapter | null = null;
 
@@ -14,19 +15,25 @@ function s3Configured() {
 
 export function getFileStorage(): FileStorageAdapter {
   if (adapter) return adapter;
-  const driver = (process.env.FILE_STORAGE_DRIVER || "local").toLowerCase();
+  const driver = (process.env.FILE_STORAGE_DRIVER || "").toLowerCase();
 
-  if (driver === "s3") {
+  // Production / Vercel must use durable object storage — local disk is ephemeral there.
+  if (driver === "s3" || (isProductionRuntime() && driver !== "local")) {
     if (!s3Configured()) {
       throw new Error(
-        "FILE_STORAGE_DRIVER=s3 but S3_BUCKET / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY are missing.",
+        "Cloud file storage is required in production. Set FILE_STORAGE_DRIVER=s3 and S3_BUCKET / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY.",
       );
     }
     adapter = new S3FileStorageAdapter();
     return adapter;
   }
 
-  // Local disk for development. Production should set FILE_STORAGE_DRIVER=s3.
+  if (isProductionRuntime() && driver === "local") {
+    throw new Error(
+      "FILE_STORAGE_DRIVER=local is not allowed in production. Use S3-compatible storage so photos survive redeploys.",
+    );
+  }
+
   adapter = new LocalFileStorageAdapter();
   return adapter;
 }

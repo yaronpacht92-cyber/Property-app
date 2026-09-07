@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const publicPaths = ["/login", "/signup", "/api/auth"];
+import { isPublicSignupEnabled } from "@/lib/runtime-flags";
+
+const publicPaths = ["/login", "/api/auth"];
+if (isPublicSignupEnabled()) {
+  publicPaths.push("/signup");
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -19,6 +24,13 @@ export async function middleware(request: NextRequest) {
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=()",
   );
+
+  // Signup disabled for personal production — send curious visitors to login.
+  if (!isPublicSignupEnabled() && (pathname === "/signup" || pathname.startsWith("/signup/"))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
 
   if (
     publicPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`)) ||

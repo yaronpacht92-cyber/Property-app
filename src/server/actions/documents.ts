@@ -12,8 +12,8 @@ import { enqueueMalwareScan } from "@/jobs/malware-scan";
 import {
   isAllowedPropertyPhoto,
   MAX_PROPERTY_PHOTO_BYTES,
-  normalizePropertyPhoto,
 } from "@/lib/property-photo";
+import { normalizePropertyPhoto } from "@/lib/property-photo-server";
 
 const ALLOWED_MIME = new Set([
   "application/pdf",

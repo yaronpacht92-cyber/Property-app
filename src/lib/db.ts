@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { Pool, type PoolConfig } from "pg";
+import { isProductionRuntime } from "@/lib/runtime-flags";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -13,12 +14,19 @@ function createPrismaClient() {
     throw new Error("DATABASE_URL is not configured.");
   }
 
-  const pool =
-    globalForPrisma.pgPool ??
-    new Pool({
-      connectionString,
-    });
+  const poolConfig: PoolConfig = {
+    connectionString,
+  };
 
+  // Managed Postgres (Neon, Supabase, Vercel, RDS) typically requires SSL.
+  if (
+    isProductionRuntime() ||
+    /sslmode=require|neon\.tech|supabase\.co|vercel-storage|amazonaws\.com/i.test(connectionString)
+  ) {
+    poolConfig.ssl = { rejectUnauthorized: false };
+  }
+
+  const pool = globalForPrisma.pgPool ?? new Pool(poolConfig);
   const adapter = new PrismaPg(pool);
   const client = new PrismaClient({
     adapter,

@@ -2,8 +2,13 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { CreateAccountForm } from "@/components/auth/create-account-form";
+import { isPublicSignupEnabled } from "@/lib/runtime-flags";
 
 export default async function SignupPage() {
+  if (!isPublicSignupEnabled()) {
+    redirect("/login");
+  }
+
   const session = await auth();
   if (session?.user) redirect("/home");
 
