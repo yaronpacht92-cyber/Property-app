@@ -7,22 +7,21 @@ import { AddUserForm } from "@/components/settings/add-user-form";
 
 export default async function UsersSettingsPage() {
   const session = await requirePermission(PERMISSIONS.USERS_MANAGE);
-  const [memberships, roles] = await Promise.all([
-    prisma.membership.findMany({
-      where: { organizationId: session.user.organizationId },
-      include: { user: true, role: true },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.role.findMany({
-      where: { organizationId: session.user.organizationId },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+  const memberships = await prisma.membership.findMany({
+    where: { organizationId: session.user.organizationId },
+    include: { user: true, role: true },
+    orderBy: { createdAt: "asc" },
+  });
 
   return (
     <div className="space-y-6 animate-fade-up">
       <BackLink href="/settings" label="Back to Settings" />
-      <h1 className="text-4xl font-semibold">Family users</h1>
+      <div>
+        <h1 className="text-4xl font-semibold">Family users</h1>
+        <p className="mt-2 text-lg text-[var(--muted-foreground)]">
+          Everyone here has full access to view and edit the portfolio.
+        </p>
+      </div>
       <div className="space-y-3">
         {memberships.map((membership) => (
           <div
@@ -33,11 +32,11 @@ export default async function UsersSettingsPage() {
               <p className="text-xl font-semibold">{membership.user.name}</p>
               <p className="text-lg text-[var(--muted-foreground)]">{membership.user.email}</p>
             </div>
-            <Badge tone="neutral">{membership.role.name}</Badge>
+            <Badge tone="success">Full access</Badge>
           </div>
         ))}
       </div>
-      <AddUserForm roles={roles.map((r) => ({ id: r.id, name: r.name, key: r.key }))} />
+      <AddUserForm />
     </div>
   );
 }

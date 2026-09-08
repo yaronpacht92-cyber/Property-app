@@ -1,7 +1,6 @@
 import { auth, hasPermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { PermissionKey } from "@/lib/permissions";
-import { ROLE_KEYS } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 
 export async function requireSession() {
@@ -20,19 +19,12 @@ export async function requirePermission(permission: PermissionKey | PermissionKe
   return session;
 }
 
-export async function getPropertyAccessFilter(userId: string, organizationId: string, roleKey: string) {
-  if (roleKey === ROLE_KEYS.READ_ONLY) {
-    const assignments = await prisma.propertyAssignment.findMany({
-      where: { userId },
-      select: { propertyId: true },
-    });
-    return {
-      organizationId,
-      deletedAt: null,
-      id: { in: assignments.map((a) => a.propertyId) },
-    };
-  }
-
+export async function getPropertyAccessFilter(
+  _userId: string,
+  organizationId: string,
+  _roleKey: string,
+) {
+  // All users are super admins — full org property access.
   return {
     organizationId,
     deletedAt: null,
@@ -42,29 +34,14 @@ export async function getPropertyAccessFilter(userId: string, organizationId: st
 export async function assertPropertyAccess(
   propertyId: string,
   organizationId: string,
-  userId: string,
-  roleKey: string,
+  _userId: string,
+  _roleKey: string,
 ) {
-  const property = await prisma.property.findFirst({
+  return prisma.property.findFirst({
     where: {
       id: propertyId,
       organizationId,
       deletedAt: null,
     },
   });
-
-  if (!property) {
-    return null;
-  }
-
-  if (roleKey === ROLE_KEYS.READ_ONLY) {
-    const assignment = await prisma.propertyAssignment.findUnique({
-      where: {
-        userId_propertyId: { userId, propertyId },
-      },
-    });
-    if (!assignment) return null;
-  }
-
-  return property;
 }

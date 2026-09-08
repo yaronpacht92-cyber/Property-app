@@ -24,31 +24,21 @@ export const ROLE_KEYS = {
   READ_ONLY: "read_only",
 } as const;
 
+/** Personal family app: every role can do everything. */
+export const ALL_PERMISSIONS = Object.values(PERMISSIONS);
+
 export const ROLE_PERMISSIONS: Record<string, PermissionKey[]> = {
-  [ROLE_KEYS.ADMIN]: Object.values(PERMISSIONS),
-  [ROLE_KEYS.MEMBER]: [
-    PERMISSIONS.PROPERTIES_READ,
-    PERMISSIONS.FINANCIALS_READ,
-    PERMISSIONS.MAINTENANCE_WRITE,
-    PERMISSIONS.DOCUMENTS_READ,
-    PERMISSIONS.DOCUMENTS_WRITE,
-    PERMISSIONS.REMINDERS_WRITE,
-    PERMISSIONS.NOTES_WRITE,
-  ],
-  [ROLE_KEYS.READ_ONLY]: [
-    PERMISSIONS.PROPERTIES_READ,
-    PERMISSIONS.FINANCIALS_READ,
-    PERMISSIONS.DOCUMENTS_READ,
-  ],
+  [ROLE_KEYS.ADMIN]: ALL_PERMISSIONS,
+  [ROLE_KEYS.MEMBER]: ALL_PERMISSIONS,
+  [ROLE_KEYS.READ_ONLY]: ALL_PERMISSIONS,
 };
 
 export function hasPermission(
-  permissions: string[] | undefined,
-  required: PermissionKey | PermissionKey[],
+  _permissions: string[] | undefined,
+  _required: PermissionKey | PermissionKey[],
 ) {
-  if (!permissions?.length) return false;
-  const needed = Array.isArray(required) ? required : [required];
-  return needed.every((p) => permissions.includes(p));
+  // Every signed-in family member is a super admin.
+  return true;
 }
 
 export const PERMISSION_CATALOG: { key: PermissionKey; description: string }[] = [

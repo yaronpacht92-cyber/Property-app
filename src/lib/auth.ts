@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { verify as verifyTotp } from "otplib";
 import { decryptSecret } from "@/lib/crypto";
-import { hasPermission } from "@/lib/permissions";
+import { ALL_PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export { hasPermission };
 
@@ -104,8 +104,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
-        const permissions = membership.role.permissions.map((rp) => rp.permission.key);
-
         return {
           id: user.id,
           email: user.email,
@@ -114,7 +112,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           organizationName: membership.organization.name,
           roleKey: membership.role.key,
           roleName: membership.role.name,
-          permissions,
+          permissions: [...ALL_PERMISSIONS],
           mfaEnabled: user.mfaEnabled,
         };
       },
@@ -154,7 +152,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.organizationName = membership.organization.name;
           token.roleKey = membership.role.key;
           token.roleName = membership.role.name;
-          token.permissions = membership.role.permissions.map((rp) => rp.permission.key);
+          token.permissions = [...ALL_PERMISSIONS];
         } else {
           token.organizationId = "";
           token.organizationName = "";

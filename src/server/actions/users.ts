@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/session";
-import { PERMISSIONS } from "@/lib/permissions";
+import { PERMISSIONS, ROLE_KEYS } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 
@@ -17,7 +17,6 @@ const schema = z.object({
     .regex(/[A-Z]/, "uppercase")
     .regex(/[a-z]/, "lowercase")
     .regex(/[0-9]/, "number"),
-  roleId: z.string().uuid(),
 });
 
 export async function addUserAction(formData: FormData) {
@@ -26,17 +25,17 @@ export async function addUserAction(formData: FormData) {
   if (!parsed.success) {
     return {
       error:
-        "Please enter a name, valid email, role, and a password with at least 12 characters including upper, lower, and a number.",
+        "Please enter a name, valid email, and a password with at least 12 characters including upper, lower, and a number.",
     };
   }
 
   const role = await prisma.role.findFirst({
     where: {
-      id: parsed.data.roleId,
       organizationId: session.user.organizationId,
+      key: ROLE_KEYS.ADMIN,
     },
   });
-  if (!role) return { error: "Please choose a valid role." };
+  if (!role) return { error: "Administrator role is missing. Please contact support." };
 
   const email = parsed.data.email.toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -69,5 +68,5 @@ export async function addUserAction(formData: FormData) {
   });
 
   revalidatePath("/settings/users");
-  return { success: `${user.name} can now sign in.` };
+  return { success: `${user.name} can now sign in with full access.` };
 }
