@@ -80,6 +80,7 @@ export function AddPropertyWizard({ ownershipEntities }: Props) {
     insuranceCarrier: "",
     insurancePolicyNumber: "",
     insuranceRenewalDate: "",
+    insurancePremium: "",
   });
 
   function update(key: keyof typeof form, value: string) {
@@ -116,6 +117,7 @@ export function AddPropertyWizard({ ownershipEntities }: Props) {
             "insuranceCarrier",
             "insurancePolicyNumber",
             "insuranceRenewalDate",
+            "insurancePremium",
             "managerName",
             "leaseExpiresAt",
             "leaseLengthMonths",
@@ -566,6 +568,17 @@ export function AddPropertyWizard({ ownershipEntities }: Props) {
                 onChange={(e) => update("insurancePolicyNumber", e.target.value)}
               />
             </Field>
+            <Field
+              label="Annual premium"
+              tip="Yearly cost of the policy. Financials uses this for portfolio planning."
+            >
+              <Input
+                value={form.insurancePremium}
+                onChange={(e) => update("insurancePremium", e.target.value)}
+                inputMode="decimal"
+                placeholder="2400"
+              />
+            </Field>
             <Field label="Renewal date">
               <Input
                 type="date"
@@ -601,7 +614,10 @@ export function AddPropertyWizard({ ownershipEntities }: Props) {
             </p>
             <p>Manager: {form.managerName || "Not added yet"}</p>
             <p>Estimated value: {form.estimatedValue || "Not added yet"}</p>
-            <p>Insurance: {form.insuranceCarrier || "Not added yet"}</p>
+            <p>
+              Insurance: {form.insuranceCarrier || "Not added yet"}
+              {form.insurancePremium ? ` · Premium $${form.insurancePremium}/year` : ""}
+            </p>
             <Textarea
               readOnly
               value="Optional sections can be completed later from the property page."

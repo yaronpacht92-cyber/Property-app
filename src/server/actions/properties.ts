@@ -51,6 +51,7 @@ const basicSchema = z.object({
   insuranceCarrier: z.string().optional(),
   insurancePolicyNumber: z.string().optional(),
   insuranceRenewalDate: z.string().optional(),
+  insurancePremium: z.string().optional(),
   ownersJson: z.string().optional(),
 });
 
@@ -286,13 +287,20 @@ export async function createPropertyAction(formData: FormData) {
       });
     }
 
-    if (data.insuranceCarrier || data.insurancePolicyNumber) {
+    if (
+      data.insuranceCarrier ||
+      data.insurancePolicyNumber ||
+      data.insuranceRenewalDate ||
+      data.insurancePremium
+    ) {
       const renewal = data.insuranceRenewalDate ? new Date(data.insuranceRenewalDate) : null;
+      const premium = money(data.insurancePremium);
       await prisma.insurancePolicy.create({
         data: {
           propertyId: property.id,
           carrier: data.insuranceCarrier || null,
           policyNumber: data.insurancePolicyNumber || null,
+          premium,
           renewalDate: renewal,
           status: renewal
             ? renewal < new Date()
@@ -300,7 +308,9 @@ export async function createPropertyAction(formData: FormData) {
               : renewal.getTime() - Date.now() < 1000 * 60 * 60 * 24 * 90
                 ? "RENEWAL_COMING_UP"
                 : "ACTIVE"
-            : "MISSING_INFORMATION",
+            : premium || data.insuranceCarrier || data.insurancePolicyNumber
+              ? "ACTIVE"
+              : "MISSING_INFORMATION",
         },
       });
 
@@ -604,4 +614,88 @@ export async function upsertPropertyManagerAction(propertyId: string, formData: 
       ? "Property manager updated."
       : "Property manager added.",
   };
+}
+
+function insuranceStatusFor(renewal: Date | null) {
+  if (!renewal) return "ACTIVE" as const;
+  if (renewal < new Date()) return "EXPIRED" as const;
+  if (renewal.getTime() - Date.now() < 1000 * 60 * 60 * 24 * 90) return "RENEWAL_COMING_UP" as const;
+  return "ACTIVE" as const;
+}
+
+export async function saveInsurancePolicyAction(propertyId: string, formData: FormData) {
+  const session = await requirePermission(PERMISSIONS.PROPERTIES_WRITE);
+  const property = await assertPropertyAccess(
+    propertyId,
+    session.user.organizationId,
+    session.user.id,
+    session.user.roleKey,
+  );
+  if (!property) return { error: "We could not find that property." };
+
+  const policyId = String(formData.get("policyId") ?? "").trim();
+  const carrier = String(formData.get("carrier") ?? "").trim();
+  const policyNumber = String(formData.get("policyNumber") ?? "").trim();
+  const premium = money(String(formData.get("premium") ?? ""));
+  const coverageAmount = money(String(formData.get("coverageAmount") ?? ""));
+  const renewalRaw = String(formData.get("renewalDate") ?? "").trim();
+  const effectiveRaw = String(formData.get("effectiveDate") ?? "").trim();
+  const renewalDate = renewalRaw ? new Date(renewalRaw) : null;
+  const effectiveDate = effectiveRaw ? new Date(effectiveRaw) : null;
+
+  if (!carrier && !policyNumber && premium == null && !renewalDate) {
+    return {
+      error: "Enter at least a carrier, policy number, premium, or renewal date.",
+    };
+  }
+
+  const status = insuranceStatusFor(renewalDate);
+  const payload = {
+    carrier: carrier || null,
+    policyNumber: policyNumber || null,
+    premium,
+    coverageAmount,
+    renewalDate,
+    effectiveDate,
+    status,
+    deletedAt: null,
+  };
+
+  if (policyId) {
+    const existing = await prisma.insurancePolicy.findFirst({
+      where: {
+        id: policyId,
+        propertyId,
+        property: { organizationId: session.user.organizationId },
+        deletedAt: null,
+      },
+    });
+    if (!existing) return { error: "We could not find that insurance policy." };
+    await prisma.insurancePolicy.update({
+      where: { id: policyId },
+      data: payload,
+    });
+  } else {
+    await prisma.insurancePolicy.create({
+      data: {
+        propertyId,
+        ...payload,
+      },
+    });
+  }
+
+  await writeAuditLog({
+    organizationId: session.user.organizationId,
+    actorUserId: session.user.id,
+    action: policyId ? "insurance.updated" : "insurance.created",
+    entityType: "InsurancePolicy",
+    entityId: propertyId,
+    summary: `${policyId ? "Updated" : "Added"} insurance for ${property.nickname}`,
+    metadata: { carrier, premium },
+  });
+
+  revalidatePath(`/properties/${propertyId}`);
+  revalidatePath("/financials");
+  revalidatePath("/home");
+  return { success: "Insurance details saved." };
 }

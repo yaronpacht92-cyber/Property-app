@@ -14,6 +14,7 @@ import { ValuationOverrideForm } from "@/components/properties/valuation-overrid
 import { ArchivePropertyButton } from "@/components/properties/archive-property-button";
 import { PropertyPhotoUpload } from "@/components/properties/property-photo-upload";
 import { PropertyManagerForm } from "@/components/properties/property-manager-form";
+import { InsurancePolicyForm } from "@/components/properties/insurance-policy-form";
 import { getFileStorage } from "@/adapters/storage";
 
 const TABS = [
@@ -416,14 +417,14 @@ export default async function PropertyDetailPage({
       ) : null}
 
       {tab === "insurance" ? (
-        <section className="space-y-3">
+        <section className="space-y-4">
           {property.insurancePolicies.length === 0 ? (
             <Alert tone="warning" title="Missing insurance information">
-              Add a policy so renewal reminders can help your family stay covered.
+              Add a policy and annual premium so Financials and renewal reminders stay accurate.
             </Alert>
           ) : (
             property.insurancePolicies.map((policy) => (
-              <article key={policy.id} className="rounded-2xl border border-[var(--border)] bg-white p-5">
+              <article key={policy.id} className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-2xl font-semibold">{policy.carrier || "Insurance policy"}</h2>
                   <Badge
@@ -438,9 +439,9 @@ export default async function PropertyDetailPage({
                     {policy.status.replaceAll("_", " ")}
                   </Badge>
                 </div>
-                <p className="mt-2 text-lg">Policy #{policy.policyNumber || "Not set"}</p>
+                <p className="text-lg">Policy #{policy.policyNumber || "Not set"}</p>
                 <p className="text-lg">
-                  Coverage {formatCurrency(policy.coverageAmount?.toString())} · Premium{" "}
+                  Coverage {formatCurrency(policy.coverageAmount?.toString())} · Annual premium{" "}
                   {formatCurrency(policy.premium?.toString())}
                 </p>
                 <p className="text-lg">
@@ -448,9 +449,38 @@ export default async function PropertyDetailPage({
                   {formatDate(policy.renewalDate)}
                 </p>
                 <p className="text-lg">Agent: {policy.agentContact?.name || "Not set"}</p>
+                {canEdit ? (
+                  <InsurancePolicyForm
+                    propertyId={property.id}
+                    policy={{
+                      id: policy.id,
+                      carrier: policy.carrier || "",
+                      policyNumber: policy.policyNumber || "",
+                      premium: policy.premium?.toString() || "",
+                      coverageAmount: policy.coverageAmount?.toString() || "",
+                      effectiveDate: policy.effectiveDate
+                        ? policy.effectiveDate.toISOString().slice(0, 10)
+                        : "",
+                      renewalDate: policy.renewalDate
+                        ? policy.renewalDate.toISOString().slice(0, 10)
+                        : "",
+                    }}
+                  />
+                ) : null}
               </article>
             ))
           )}
+          {canEdit && property.insurancePolicies.length === 0 ? (
+            <InsurancePolicyForm propertyId={property.id} />
+          ) : null}
+          {canEdit && property.insurancePolicies.length > 0 ? (
+            <details className="rounded-2xl border border-[var(--border)] bg-white p-5">
+              <summary className="cursor-pointer text-xl font-semibold">Add another policy</summary>
+              <div className="mt-4">
+                <InsurancePolicyForm propertyId={property.id} />
+              </div>
+            </details>
+          ) : null}
         </section>
       ) : null}
 
