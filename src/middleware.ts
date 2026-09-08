@@ -47,9 +47,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Production (HTTPS) sets __Secure-authjs.session-token. Without secureCookie,
+  // getToken looks for the non-prefixed name and misses the session → redirect loop
+  // between /login (auth() sees the cookie) and /home (middleware does not).
+  const secureCookie =
+    process.env.AUTH_URL?.startsWith("https://") === true ||
+    process.env.VERCEL === "1" ||
+    process.env.NODE_ENV === "production";
+
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
+    secureCookie,
   });
 
   if (!token) {
