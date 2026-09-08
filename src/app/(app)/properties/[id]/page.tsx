@@ -91,7 +91,6 @@ export default async function PropertyDetailPage({
   const otherContacts = property.contacts.filter((c) => c.role !== "PROPERTY_MANAGER");
   const ownerNames = property.owners.map((owner) => owner.name).filter(Boolean);
   const canEdit = hasPermission(session.user.permissions, PERMISSIONS.PROPERTIES_WRITE);
-  const storage = getFileStorage();
   const currentPhoto = property.photoDocumentId
     ? await prisma.document.findFirst({
         where: {
@@ -101,9 +100,15 @@ export default async function PropertyDetailPage({
         },
       })
     : null;
-  const currentPhotoUrl = currentPhoto
-    ? (await storage.getSignedDownloadUrl(currentPhoto.storageKey, 600)).url
-    : null;
+  let currentPhotoUrl: string | null = null;
+  if (currentPhoto) {
+    try {
+      const storage = getFileStorage();
+      currentPhotoUrl = (await storage.getSignedDownloadUrl(currentPhoto.storageKey, 600)).url;
+    } catch {
+      currentPhotoUrl = null;
+    }
+  }
   const canMaintain = hasPermission(session.user.permissions, PERMISSIONS.MAINTENANCE_WRITE);
   const canDocs = hasPermission(session.user.permissions, PERMISSIONS.DOCUMENTS_WRITE);
   const canNotes = hasPermission(session.user.permissions, PERMISSIONS.NOTES_WRITE);

@@ -7,10 +7,20 @@ import {
 } from "@aws-sdk/client-s3";
 import type { FileStorageAdapter } from "@/adapters/storage/types";
 
-function requireEnv(name: string) {
-  const value = process.env[name];
+function env(name: string, ...fallbacks: string[]) {
+  for (const key of [name, ...fallbacks]) {
+    const value = process.env[key];
+    if (value) return value;
+  }
+  return undefined;
+}
+
+function requireEnv(name: string, ...fallbacks: string[]) {
+  const value = env(name, ...fallbacks);
   if (!value) {
-    throw new Error(`${name} is required when FILE_STORAGE_DRIVER=s3.`);
+    throw new Error(
+      `${[name, ...fallbacks].join(" or ")} is required when FILE_STORAGE_DRIVER=s3.`,
+    );
   }
   return value;
 }
@@ -31,7 +41,7 @@ async function streamToBuffer(body: unknown): Promise<Buffer> {
 }
 
 /**
- * S3-compatible object storage (AWS S3, MinIO, R2, etc.).
+ * S3-compatible object storage (AWS S3, MinIO, R2, Neon Object Storage, etc.).
  * Downloads stay proxied through /api/files/download so auth stays org-scoped.
  */
 export class S3FileStorageAdapter implements FileStorageAdapter {
@@ -40,16 +50,19 @@ export class S3FileStorageAdapter implements FileStorageAdapter {
   private bucket: string;
 
   constructor() {
-    this.bucket = requireEnv("S3_BUCKET");
-    const region = process.env.S3_REGION || "us-east-1";
-    const endpoint = process.env.S3_ENDPOINT || undefined;
+    this.bucket = requireEnv("S3_BUCKET", "NEON_STORAGE_BUCKET");
+    const region = env("S3_REGION", "AWS_REGION") || "us-east-1";
+    const endpoint = env("S3_ENDPOINT", "AWS_ENDPOINT_URL_S3");
+    const forcePathStyle =
+      process.env.S3_FORCE_PATH_STYLE === "true" ||
+      Boolean(endpoint?.includes("neon.tech") || endpoint?.includes("neondb"));
     this.client = new S3Client({
       region,
       endpoint,
-      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
+      forcePathStyle,
       credentials: {
-        accessKeyId: requireEnv("S3_ACCESS_KEY_ID"),
-        secretAccessKey: requireEnv("S3_SECRET_ACCESS_KEY"),
+        accessKeyId: requireEnv("S3_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"),
+        secretAccessKey: requireEnv("S3_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY"),
       },
     });
   }

@@ -68,14 +68,20 @@ export default async function PropertiesPage({
         },
       })
     : [];
-  const storage = getFileStorage();
   const photoUrlByDocId = new Map<string, string>();
-  await Promise.all(
-    photoDocs.map(async (doc) => {
-      const signed = await storage.getSignedDownloadUrl(doc.storageKey, 600);
-      photoUrlByDocId.set(doc.id, signed.url);
-    }),
-  );
+  if (photoDocs.length) {
+    try {
+      const storage = getFileStorage();
+      await Promise.all(
+        photoDocs.map(async (doc) => {
+          const signed = await storage.getSignedDownloadUrl(doc.storageKey, 600);
+          photoUrlByDocId.set(doc.id, signed.url);
+        }),
+      );
+    } catch {
+      // Storage misconfigured — still render the list without photo URLs.
+    }
+  }
 
   const canAdd = hasPermission(session.user.permissions, PERMISSIONS.PROPERTIES_WRITE);
 

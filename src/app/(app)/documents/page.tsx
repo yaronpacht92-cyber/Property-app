@@ -37,7 +37,12 @@ export default async function DocumentsPage({
     orderBy: { createdAt: "desc" },
   });
 
-  const storage = getFileStorage();
+  let storage: ReturnType<typeof getFileStorage> | null = null;
+  try {
+    storage = getFileStorage();
+  } catch {
+    storage = null;
+  }
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -77,44 +82,53 @@ export default async function DocumentsPage({
           <Alert tone="info" title="No documents found">
             Upload a document or adjust your search.
           </Alert>
-        ) : (
-          await Promise.all(
-            documents.map(async (doc) => {
-              const signed = await storage.getSignedDownloadUrl(doc.storageKey, 300);
-              return (
-                <article
-                  key={doc.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
-                >
-                  <div>
-                    <p className="text-xl font-semibold">{doc.name}</p>
-                    <p className="text-lg text-[var(--muted-foreground)]">
-                      {doc.property?.nickname || "Whole portfolio"} ·{" "}
-                      {doc.category.replaceAll("_", " ")} · {formatDate(doc.createdAt)}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Badge tone="neutral">Uploaded by {doc.uploadedBy?.name || "Unknown"}</Badge>
-                      <Badge
-                        tone={
-                          doc.scanStatus === "INFECTED"
-                            ? "danger"
-                            : doc.scanStatus === "CLEAN" || doc.scanStatus === "SKIPPED"
-                              ? "success"
-                              : "warning"
-                        }
-                      >
-                        Security check: {doc.scanStatus.toLowerCase()}
-                      </Badge>
+        ) : !storage ? (
+          <Alert tone="warning" title="Downloads unavailable">
+            Cloud file storage is not configured yet. Document names still appear below.
+          </Alert>
+        ) : null}
+        {documents.length > 0
+          ? await Promise.all(
+              documents.map(async (doc) => {
+                const signed = storage
+                  ? await storage.getSignedDownloadUrl(doc.storageKey, 300)
+                  : null;
+                return (
+                  <article
+                    key={doc.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
+                  >
+                    <div>
+                      <p className="text-xl font-semibold">{doc.name}</p>
+                      <p className="text-lg text-[var(--muted-foreground)]">
+                        {doc.property?.nickname || "Whole portfolio"} ·{" "}
+                        {doc.category.replaceAll("_", " ")} · {formatDate(doc.createdAt)}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Badge tone="neutral">Uploaded by {doc.uploadedBy?.name || "Unknown"}</Badge>
+                        <Badge
+                          tone={
+                            doc.scanStatus === "INFECTED"
+                              ? "danger"
+                              : doc.scanStatus === "CLEAN" || doc.scanStatus === "SKIPPED"
+                                ? "success"
+                                : "warning"
+                          }
+                        >
+                          Security check: {doc.scanStatus.toLowerCase()}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                  <Button asChild variant="secondary">
-                    <a href={signed.url}>Secure Download</a>
-                  </Button>
-                </article>
-              );
-            }),
-          )
-        )}
+                    {signed ? (
+                      <Button asChild variant="secondary">
+                        <a href={signed.url}>Secure Download</a>
+                      </Button>
+                    ) : null}
+                  </article>
+                );
+              }),
+            )
+          : null}
       </div>
     </div>
   );
